@@ -504,6 +504,266 @@ th {
 .money-credit { color: #8de3ba; }
 .money-debit { color: #ffb4b4; }
 
+.reconciliation-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.reconciliation-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.5fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.credit-inbox,
+.reconciliation-detail,
+.charge-allocation,
+.allocation-history {
+  display: grid;
+  gap: 1rem;
+}
+
+.credit-inbox {
+  padding: 1rem;
+  max-height: calc(100vh - 250px);
+  position: sticky;
+  top: 1rem;
+}
+
+.credit-inbox h2,
+.transaction-strip h2,
+.transaction-strip p,
+.reconciliation-empty h2,
+.reconciliation-empty p,
+.charge-allocation h3,
+.charge-allocation p {
+  margin: 0;
+}
+
+.count-pill {
+  min-width: 2rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(247, 185, 85, 0.16);
+  color: var(--accent);
+  text-align: center;
+  font-weight: 800;
+}
+
+.credit-list {
+  display: grid;
+  gap: 0.6rem;
+  overflow-y: auto;
+}
+
+.credit-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.credit-item:hover,
+.credit-item.selected {
+  border-color: rgba(247, 185, 85, 0.45);
+  background: rgba(247, 185, 85, 0.08);
+}
+
+.credit-item-top,
+.credit-item-money {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.credit-item-top strong {
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.credit-item small,
+.transaction-strip p,
+.transaction-amount span,
+.charge-row span,
+.allocation-totals span,
+.unit-results span {
+  color: var(--muted);
+}
+
+.credit-item .status {
+  justify-self: start;
+}
+
+.status-unmatched { background: rgba(247, 185, 85, 0.18); color: #ffd58e; }
+.status-partially_matched { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
+.status-matched { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
+
+.reconciliation-detail {
+  min-height: 520px;
+}
+
+.reconciliation-empty {
+  align-self: center;
+  justify-self: center;
+  max-width: 420px;
+  text-align: center;
+}
+
+.reconciliation-empty > span {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(247, 185, 85, 0.4);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.transaction-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.transaction-amount {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  text-align: right;
+}
+
+.transaction-amount strong {
+  color: #8de3ba;
+  font-size: 1.75rem;
+}
+
+.alias-suggestion {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(65, 200, 140, 0.3);
+  border-radius: 14px;
+  background: rgba(20, 120, 75, 0.14);
+  color: #a5ebc9;
+}
+
+.unit-picker {
+  position: relative;
+}
+
+.unit-results {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  display: grid;
+  padding: 0.45rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: #111c36;
+  box-shadow: var(--shadow);
+}
+
+.unit-results button {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.unit-results button:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.charge-allocation {
+  padding: 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.charge-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.charge-row {
+  display: grid;
+  grid-template-columns: 1fr 170px;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.charge-row > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.charge-row input {
+  margin-top: 0.2rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.allocation-totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+}
+
+.allocation-totals > div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem;
+  border-top: 2px solid rgba(247, 185, 85, 0.35);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.alias-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.alias-checkbox input {
+  width: auto;
+  margin: 0;
+}
+
+.confirm-allocation {
+  justify-self: end;
+}
+
+.confirm-allocation:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -536,6 +796,19 @@ th {
   .upload-form {
     grid-template-columns: 1fr;
   }
+
+  .reconciliation-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reconciliation-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-inbox {
+    position: static;
+    max-height: 520px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -567,7 +840,22 @@ th {
   }
 
   .transaction-filters,
-  .import-summary {
+  .import-summary,
+  .reconciliation-filters,
+  .allocation-totals {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-strip,
+  .alias-suggestion {
+    flex-direction: column;
+  }
+
+  .transaction-amount {
+    text-align: left;
+  }
+
+  .charge-row {
     grid-template-columns: 1fr;
   }
 }
