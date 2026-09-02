@@ -244,6 +244,12 @@ label {
   background: rgba(120, 20, 20, 0.18);
 }
 
+.alert.success {
+  border-color: rgba(65, 200, 140, 0.35);
+  background: rgba(20, 120, 75, 0.18);
+  color: #a5ebc9;
+}
+
 .toolbar,
 .form-grid,
 .payment-form {
@@ -419,6 +425,85 @@ th {
   text-decoration: line-through;
 }
 
+.import-upload-panel,
+.upload-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.import-upload-panel {
+  grid-template-columns: 1fr minmax(340px, 0.8fr);
+  align-items: end;
+}
+
+.import-upload-panel h2,
+.import-upload-panel p,
+.import-list-heading h2 {
+  margin: 0;
+}
+
+.upload-form {
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+.file-field input {
+  padding: 0.7rem;
+}
+
+.file-field input::file-selector-button {
+  margin-right: 0.8rem;
+  border: 0;
+  border-radius: 9px;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.import-list-heading {
+  padding: 1.25rem 1.5rem 0;
+}
+
+.imports-table {
+  min-width: 1120px;
+}
+
+.import-status-processed { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
+.import-status-review_required { background: rgba(247, 185, 85, 0.18); color: #ffd58e; }
+.import-status-failed { background: rgba(255, 120, 120, 0.14); color: #ffb4b4; }
+.import-status-processing,
+.import-status-uploaded { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
+
+.import-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.processing-errors {
+  border: 1px solid rgba(247, 185, 85, 0.3);
+  border-radius: 14px;
+  padding: 1rem;
+  background: rgba(120, 80, 20, 0.15);
+  color: #ffdba2;
+}
+
+.processing-errors p {
+  margin: 0.45rem 0 0;
+}
+
+.transaction-filters {
+  grid-template-columns: repeat(2, minmax(180px, 280px));
+  justify-content: end;
+}
+
+.transaction-table-wrap {
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+}
+
+.money-credit { color: #8de3ba; }
+.money-debit { color: #ffb4b4; }
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -445,6 +530,11 @@ th {
 
   .payment-form h3 {
     grid-column: 1 / -1;
+  }
+
+  .import-upload-panel,
+  .upload-form {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -474,5 +564,10 @@ th {
 
   .section-heading {
     flex-direction: column;
+  }
+
+  .transaction-filters,
+  .import-summary {
+    grid-template-columns: 1fr;
   }
 }
