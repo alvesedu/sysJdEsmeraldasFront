@@ -37,11 +37,15 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
-input {
+input,
+select,
+textarea {
   width: 100%;
   margin-top: 0.4rem;
   padding: 0.85rem 1rem;
@@ -49,6 +53,15 @@ input {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
+}
+
+select option {
+  background: #111c36;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
 label {
@@ -224,6 +237,188 @@ label {
   color: #ffb4b4;
 }
 
+.alert {
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  background: rgba(120, 20, 20, 0.18);
+}
+
+.toolbar,
+.form-grid,
+.payment-form {
+  display: grid;
+  gap: 1rem;
+  align-items: end;
+}
+
+.toolbar {
+  grid-template-columns: 1fr 1fr 1.2fr 1.5fr auto;
+}
+
+.toolbar-action {
+  min-height: 48px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.operational-panel {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-heading h2,
+.section-heading p,
+.operational-panel h3 {
+  margin: 0;
+}
+
+.form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wide-field {
+  grid-column: span 2;
+}
+
+.inline-field,
+.row-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.compact {
+  padding: 0.65rem 0.8rem;
+  white-space: nowrap;
+}
+
+.table-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1050px;
+}
+
+th,
+td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--panel-border);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.link-button.danger {
+  color: #ff9c9c;
+}
+
+.status {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-pending { background: rgba(247, 185, 85, 0.18); color: #ffd58e; }
+.status-partial { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
+.status-paid { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
+.status-cancelled { background: rgba(255, 120, 120, 0.14); color: #ffb4b4; }
+
+.empty-state,
+.loading-text {
+  padding: 1rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.detail-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.payment-form {
+  grid-template-columns: 1fr 1fr 2fr auto;
+  padding: 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.payment-form h3 {
+  grid-column: 1 / -1;
+}
+
+.payment-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.payment-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+}
+
+.payment-row > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.payment-row span,
+.payment-row small {
+  color: var(--muted);
+}
+
+.payment-row.reversed {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -241,6 +436,16 @@ label {
   .auth-page {
     grid-template-columns: 1fr;
   }
+
+  .toolbar,
+  .form-grid,
+  .payment-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .payment-form h3 {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 720px) {
@@ -252,5 +457,22 @@ label {
 
   .hero-grid {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar,
+  .summary-grid,
+  .detail-summary,
+  .form-grid,
+  .payment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field,
+  .payment-form h3 {
+    grid-column: auto;
+  }
+
+  .section-heading {
+    flex-direction: column;
   }
 }
