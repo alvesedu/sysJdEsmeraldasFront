@@ -4,6 +4,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageHeader } from '../components/PageHeader';
+import { currentCompetence, formatCompetence } from '../utils/competence';
 import { buildCreditAllocationPayload } from '../utils/formWorkflows';
 import { formatCents, reaisInputToCents } from '../utils/money';
 
@@ -21,7 +22,7 @@ type Credit = {
   remainingAmount: number;
   status: ReconciliationStatus;
 };
-type Resident = { name: string };
+type Resident = { _id: string; name: string; unitId?: Unit | string | null };
 type Unit = {
   _id: string;
   quadra: string;
@@ -62,11 +63,14 @@ const initialFilters = { competence: '', status: 'UNMATCHED', counterparty: '', 
 export function ReconciliationPage() {
   const [credits, setCredits] = useState<Credit[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
   const [imports, setImports] = useState<BankImport[]>([]);
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const [selectedResidentId, setSelectedResidentId] = useState('');
+  const [paymentCompetence, setPaymentCompetence] = useState(currentCompetence());
   const [unitSearch, setUnitSearch] = useState('');
   const [charges, setCharges] = useState<Charge[]>([]);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -80,12 +84,13 @@ export function ReconciliationPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([api.get('/units'), api.get('/bank-imports')])
-      .then(([unitResponse, importResponse]) => {
+    Promise.all([api.get('/units'), api.get('/residents'), api.get('/bank-imports')])
+      .then(([unitResponse, residentResponse, importResponse]) => {
         setUnits(unitResponse.data.items);
+        setResidents(residentResponse.data.items);
         setImports(importResponse.data.items);
       })
-      .catch(() => setError('Não foi possível carregar unidades e importações.'));
+      .catch(() => setError('Não foi possível carregar moradores, unidades e importações.'));
   }, []);
 
   useEffect(() => {
@@ -126,13 +131,17 @@ export function ReconciliationPage() {
       const next = data as Detail;
       setDetail(next);
       setSaveAlias(next.suggestionReason !== 'BANK_ALIAS');
+      setPaymentCompetence(defaultPaymentCompetence(next.transaction));
       if (next.suggestedUnit) {
         setSelectedUnit(next.suggestedUnit);
+        setSelectedResidentId(residentIdOfUnit(next.suggestedUnit));
         setUnitSearch(unitLabel(next.suggestedUnit));
-        setCharges(next.openCharges);
-        setSuggestedAmounts(next.openCharges, next.remainingAmount);
+        const filteredCharges = filterChargesByCompetence(next.openCharges, defaultPaymentCompetence(next.transaction));
+        setCharges(filteredCharges);
+        setSuggestedAmounts(filteredCharges, next.remainingAmount);
       } else {
         setSelectedUnit(null);
+        setSelectedResidentId('');
         setUnitSearch('');
         setCharges([]);
         setAmounts({});
@@ -142,16 +151,36 @@ export function ReconciliationPage() {
     }
   }
 
-  async function chooseUnit(unit: Unit) {
+  async function chooseUnit(unit: Unit, competence = paymentCompetence) {
     setSelectedUnit(unit);
+    setSelectedResidentId(residentIdOfUnit(unit));
     setUnitSearch(unitLabel(unit));
     try {
-      const { data } = await api.get(`/units/${unit._id}/open-charges`);
+      const { data } = await api.get(`/units/${unit._id}/open-charges`, { params: { competence } });
       setCharges(data.items);
       setSuggestedAmounts(data.items, detail?.remainingAmount ?? 0);
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível carregar as cobranças da unidade.'));
     }
+  }
+
+  async function chooseResident(residentId: string) {
+    setSelectedResidentId(residentId);
+    const resident = residents.find((item) => item._id === residentId);
+    const unit = unitOfResident(resident);
+    if (!unit) {
+      setSelectedUnit(null);
+      setUnitSearch('');
+      setCharges([]);
+      setAmounts({});
+      return;
+    }
+    await chooseUnit(unit);
+  }
+
+  async function changePaymentCompetence(value: string) {
+    setPaymentCompetence(value);
+    if (selectedUnit) await chooseUnit(selectedUnit, value);
   }
 
   function setSuggestedAmounts(openCharges: Charge[], available: number) {
@@ -250,13 +279,15 @@ export function ReconciliationPage() {
               {detail.suggestedUnit ? <div className="alias-suggestion"><strong>Sugestão baseada em pagamento anterior</strong><span>{unitLabel(detail.suggestedUnit)}</span></div> : null}
 
               <div className="unit-picker">
-                <label>Unidade ou morador<input placeholder="Quadra, número ou nome do morador" value={unitSearch} onChange={(event) => { setUnitSearch(event.target.value); setSelectedUnit(null); }} /></label>
+                <label>Morador<select value={selectedResidentId} onChange={(event) => { void chooseResident(event.target.value); }}><option value="">Selecione o morador</option>{residentsWithUnit(residents).map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
+                <label>Mês do pagamento<select value={paymentCompetence} onChange={(event) => { void changePaymentCompetence(event.target.value); }}>{paymentCompetenceOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                <label>Unidade ou morador<input placeholder="Quadra, número ou nome do morador" value={unitSearch} onChange={(event) => { setUnitSearch(event.target.value); setSelectedUnit(null); setSelectedResidentId(''); }} /></label>
                 {matchingUnits.length > 0 ? <div className="unit-results">{matchingUnits.map((unit) => <button key={unit._id} onClick={() => chooseUnit(unit)}><strong>{unitLabel(unit)}</strong><span>{unit.residentCurrentId?.name || 'Sem morador atual'}</span></button>)}</div> : null}
               </div>
 
               {selectedUnit ? (
                 <div className="charge-allocation">
-                  <div className="section-heading"><div><p className="eyebrow">Cobranças abertas</p><h3>{unitLabel(selectedUnit)}</h3><p>{selectedUnit.residentCurrentId?.name || 'Sem morador atual'}</p></div></div>
+                  <div className="section-heading"><div><p className="eyebrow">Cobrança do mês</p><h3>{formatCompetence(paymentCompetence)} · {unitLabel(selectedUnit)}</h3><p>{selectedUnit.residentCurrentId?.name || 'Sem morador atual'}</p></div></div>
                   <div className="charge-list">
                     {charges.map((charge) => (
                       <div className="charge-row" key={charge._id}>
@@ -264,7 +295,7 @@ export function ReconciliationPage() {
                         <label>Alocar (R$)<MoneyInput placeholder="0,00" value={amounts[charge._id] ?? ''} onChange={(value) => setAmounts({ ...amounts, [charge._id]: value })} /></label>
                       </div>
                     ))}
-                    {charges.length === 0 ? <p className="empty-state">Esta unidade não possui cobranças abertas.</p> : null}
+                    {charges.length === 0 ? <p className="empty-state">Esta unidade não possui cobrança aberta para {formatCompetence(paymentCompetence)}.</p> : null}
                   </div>
 
                   <div className="allocation-totals"><div><span>Crédito disponível</span><strong>{formatCents(detail.remainingAmount)}</strong></div><div><span>Alocado agora</span><strong>{formatCents(enteredTotal)}</strong></div><div><span>Restante projetado</span><strong className={enteredTotal > detail.remainingAmount ? 'money-debit' : ''}>{enteredTotal > detail.remainingAmount ? 'Valor excedido' : formatCents(projectedRemaining)}</strong></div></div>
@@ -310,3 +341,46 @@ function competenceLabel(value: string) { const [year, month] = value.split('-')
 function statusLabel(status: ReconciliationStatus) { return { UNMATCHED: 'Não conciliado', PARTIALLY_MATCHED: 'Parcial', MATCHED: 'Conciliado' }[status]; }
 function typeLabel(type: string) { return { PIX_RECEIVED: 'Pix recebido', TRANSFER_RECEIVED: 'Transferência recebida', OTHER: 'Outro crédito' }[type] ?? type; }
 function parseMoneyToCents(value: string) { try { return reaisInputToCents(value); } catch { return 0; } }
+
+function paymentCompetenceOptions() {
+  const current = currentCompetence();
+  return [
+    { value: shiftCompetence(current, -1), label: `Anterior · ${formatCompetence(shiftCompetence(current, -1))}` },
+    { value: current, label: `Atual · ${formatCompetence(current)}` },
+    { value: shiftCompetence(current, 1), label: `Sucessivo · ${formatCompetence(shiftCompetence(current, 1))}` }
+  ];
+}
+
+function defaultPaymentCompetence(transaction: Credit) {
+  const transactionCompetence = (transaction.operationDate ?? transaction.postingDate).slice(0, 7);
+  return paymentCompetenceOptions().some((option) => option.value === transactionCompetence)
+    ? transactionCompetence
+    : currentCompetence();
+}
+
+function shiftCompetence(value: string, offset: number) {
+  const [year, month] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return date.toISOString().slice(0, 7);
+}
+
+function residentsWithUnit(residents: Resident[]) {
+  return residents.filter((resident) => unitOfResident(resident));
+}
+
+function residentLabel(resident: Resident) {
+  const unit = unitOfResident(resident);
+  return unit ? `${resident.name} · ${unitLabel(unit)}` : resident.name;
+}
+
+function unitOfResident(resident?: Resident) {
+  return resident?.unitId && typeof resident.unitId !== 'string' ? resident.unitId : null;
+}
+
+function residentIdOfUnit(unit: Unit) {
+  return typeof unit.residentCurrentId === 'object' && unit.residentCurrentId?._id ? unit.residentCurrentId._id : '';
+}
+
+function filterChargesByCompetence(charges: Charge[], competence: string) {
+  return charges.filter((charge) => charge.competence === competence);
+}
