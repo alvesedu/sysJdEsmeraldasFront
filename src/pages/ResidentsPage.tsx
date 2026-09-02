@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { api, apiErrorMessage } from '../api/client';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '../components/Feedback';
+import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { buildResidentPayload } from '../utils/formWorkflows';
@@ -104,8 +105,7 @@ export function ResidentsPage() {
       </section>
 
       {showForm ? (
-        <section className="panel operational-panel">
-          <div className="section-heading"><h2>{editingId ? 'Editar morador' : 'Novo morador'}</h2><button className="ghost-button compact" onClick={() => setShowForm(false)}>Fechar</button></div>
+        <Modal title={editingId ? 'Editar morador' : 'Novo morador'} subtitle="Vincule a unidade atual quando houver ocupação ativa." onClose={() => setShowForm(false)}>
           <form className="form-grid" onSubmit={submitResident}>
             <label>Nome<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
             <label>Telefone<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label>
@@ -114,7 +114,7 @@ export function ResidentsPage() {
             <label>Situação<select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm({ ...form, active: event.target.value === 'active' })}><option value="active">Ativo</option><option value="inactive">Inativo</option></select></label>
             <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar morador'}</button>
           </form>
-        </section>
+        </Modal>
       ) : null}
 
       <section className="panel table-panel">

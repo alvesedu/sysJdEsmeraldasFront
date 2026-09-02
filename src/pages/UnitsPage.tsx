@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { api, apiErrorMessage } from '../api/client';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '../components/Feedback';
+import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCents } from '../utils/money';
@@ -111,8 +112,7 @@ export function UnitsPage() {
       </section>
 
       {showForm ? (
-        <section className="panel operational-panel">
-          <div className="section-heading"><h2>{editingId ? 'Editar unidade' : 'Nova unidade'}</h2><button className="ghost-button compact" onClick={() => setShowForm(false)}>Fechar</button></div>
+        <Modal title={editingId ? 'Editar unidade' : 'Nova unidade'} subtitle="Campos obrigatórios: quadra, número e tipo." onClose={() => setShowForm(false)}>
           <form className="form-grid compact-form" onSubmit={submitUnit}>
             <label>Quadra<input required value={form.quadra} onChange={(event) => setForm({ ...form, quadra: event.target.value })} /></label>
             <label>Número<input required value={form.numero} onChange={(event) => setForm({ ...form, numero: event.target.value })} /></label>
@@ -120,7 +120,7 @@ export function UnitsPage() {
             <label>Situação<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as UnitStatus })}><option value="ATIVA">Ativa</option><option value="INATIVA">Inativa</option></select></label>
             <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar unidade'}</button>
           </form>
-        </section>
+        </Modal>
       ) : null}
 
       <section className="panel table-panel">

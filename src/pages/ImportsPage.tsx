@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, apiErrorMessage } from '../api/client';
+import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
 import { assertPdfUpload } from '../utils/formWorkflows';
@@ -50,6 +51,7 @@ export function ImportsPage() {
   const [direction, setDirection] = useState('');
   const [transactionType, setTransactionType] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -121,6 +123,7 @@ export function ImportsPage() {
           : `Processamento concluído com status ${statusLabel(data.status)}.`
       );
       setFile(null);
+      setShowUploadModal(false);
       await refreshImports();
       await openImport(data.importId);
     } catch (caught) {
@@ -138,11 +141,12 @@ export function ImportsPage() {
       {message ? <div className="alert success">{message}</div> : null}
 
       <section className="panel import-upload-panel">
-        <div>
-          <p className="eyebrow">Novo extrato</p>
-          <h2>Importar PDF bancário</h2>
-          <p>Arquivo PDF do Banco do Brasil, com até 10 MB e texto selecionável.</p>
-        </div>
+        <div><p className="eyebrow">Novo extrato</p><h2>Importar PDF bancário</h2><p>Arquivo PDF do Banco do Brasil, com até 10 MB e texto selecionável.</p></div>
+        <button className="primary-button" type="button" onClick={() => setShowUploadModal(true)}>Nova importação</button>
+      </section>
+
+      {showUploadModal ? (
+        <Modal title="Nova importação bancária" subtitle="Envie o PDF do Banco do Brasil para processamento." onClose={() => setShowUploadModal(false)}>
         <form className="upload-form" onSubmit={submitUpload}>
           <label className="file-field">
             Arquivo PDF
@@ -157,7 +161,8 @@ export function ImportsPage() {
             {uploading ? 'Processando...' : 'Enviar e processar'}
           </button>
         </form>
-      </section>
+        </Modal>
+      ) : null}
 
       <section className="panel table-panel">
         <div className="section-heading import-list-heading">

@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, apiErrorMessage } from '../api/client';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Modal } from '../components/Modal';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
@@ -74,11 +76,17 @@ export function PayablesPage() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
   const [detail, setDetail] = useState<AccountPayable | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [accountToCancel, setAccountToCancel] = useState<AccountPayable | null>(null);
+  const [paymentToReverse, setPaymentToReverse] = useState<Payment | null>(null);
+  const [reversalReason, setReversalReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
@@ -181,21 +189,24 @@ export function PayablesPage() {
   }
 
   async function createCategory() {
-    const name = window.prompt('Nome da nova categoria:')?.trim();
+    const name = categoryName.trim();
     if (!name) return;
     try {
       const { data } = await api.post('/lookups/categories', { name });
       setCategories((current) => [...current, data.item].sort((a, b) => a.name.localeCompare(b.name)));
       setForm((current) => ({ ...current, categoryId: data.item._id }));
+      setCategoryName('');
+      setShowCategoryForm(false);
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível criar a categoria.'));
     }
   }
 
-  async function cancelAccount(item: AccountPayable) {
-    if (!window.confirm(`Cancelar a conta “${item.description}”?`)) return;
+  async function cancelAccount(item = accountToCancel) {
+    if (!item) return;
     try {
       await api.post(`/accounts-payable/${item._id}/cancel`);
+      setAccountToCancel(null);
       if (detail?._id === item._id) await openDetail(item._id);
       await refreshAccounts();
       setError('');
@@ -214,6 +225,7 @@ export function PayablesPage() {
       await api.post(`/accounts-payable/${detail._id}/payments`, buildManualPaymentPayload({ amount: paymentAmount, paymentDate, notes: paymentNotes }));
       setPaymentAmount('');
       setPaymentNotes('');
+      setShowPaymentForm(false);
       setMessage('Pagamento registrado.');
       await openDetail(detail._id);
       await refreshAccounts();
@@ -224,13 +236,14 @@ export function PayablesPage() {
     }
   }
 
-  async function reversePayment(payment: Payment) {
-    if (!detail || !window.confirm(`Estornar o pagamento de ${formatCents(payment.amount)}?`)) return;
-    const reason = window.prompt('Motivo do estorno (opcional):') ?? '';
+  async function reversePayment(payment = paymentToReverse) {
+    if (!detail || !payment) return;
     try {
       await api.post(`/accounts-payable/${detail._id}/payments/${payment._id}/reverse`, {
-        reason: reason || null
+        reason: reversalReason || null
       });
+      setPaymentToReverse(null);
+      setReversalReason('');
       await openDetail(detail._id);
       await refreshAccounts();
       setError('');
@@ -284,11 +297,7 @@ export function PayablesPage() {
       </div>
 
       {showForm ? (
-        <section className="panel operational-panel">
-          <div className="section-heading">
-            <h2>{editingId ? 'Editar conta' : 'Nova conta'}</h2>
-            <button className="ghost-button compact" onClick={() => setShowForm(false)}>Fechar</button>
-          </div>
+        <Modal title={editingId ? 'Editar conta' : 'Nova conta'} subtitle="Valores são enviados ao backend em centavos." onClose={() => setShowForm(false)}>
           <form className="form-grid" onSubmit={submitAccount}>
             <label>Descrição<input required value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
             <label>Favorecido<input required value={form.beneficiaryName} onChange={(event) => setForm({ ...form, beneficiaryName: event.target.value })} /></label>
@@ -299,7 +308,7 @@ export function PayablesPage() {
                   <option value="">Selecione</option>
                   {categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
                 </select>
-                <button type="button" className="ghost-button compact" onClick={createCategory}>Nova</button>
+                <button type="button" className="ghost-button compact" onClick={() => setShowCategoryForm(true)}>Nova</button>
               </div>
             </label>
             <label>Subcategoria<input value={form.subcategory} onChange={(event) => setForm({ ...form, subcategory: event.target.value })} /></label>
@@ -309,7 +318,16 @@ export function PayablesPage() {
             <label className="wide-field">Observação<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar conta'}</button>
           </form>
-        </section>
+        </Modal>
+      ) : null}
+
+      {showCategoryForm ? (
+        <Modal title="Nova categoria" subtitle="A categoria criada já fica selecionada na conta." onClose={() => setShowCategoryForm(false)}>
+          <form className="form-grid compact-form" onSubmit={(event) => { event.preventDefault(); void createCategory(); }}>
+            <label>Nome<input required value={categoryName} onChange={(event) => setCategoryName(event.target.value)} /></label>
+            <button className="primary-button" type="submit">Cadastrar categoria</button>
+          </form>
+        </Modal>
       ) : null}
 
       <section className="panel table-panel">
@@ -322,7 +340,7 @@ export function PayablesPage() {
                   <td>{item.description}</td><td>{item.beneficiaryName}</td><td>{categoryNameOf(item)}</td><td>{item.competence}</td>
                   <td>{formatCents(item.expectedAmount)}</td><td>{formatCents(item.paidAmount)}</td><td>{formatCents(item.outstandingAmount)}</td>
                   <td><span className={`status status-${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span></td>
-                  <td><div className="row-actions"><button className="link-button" onClick={() => openDetail(item._id)}>Detalhes</button><button className="link-button" disabled={item.status === 'CANCELLED'} onClick={() => startEdit(item)}>Editar</button><button className="link-button danger" disabled={item.status === 'CANCELLED' || item.paidAmount > 0} onClick={() => cancelAccount(item)}>Cancelar</button></div></td>
+                  <td><div className="row-actions"><button className="link-button" onClick={() => openDetail(item._id)}>Detalhes</button><button className="link-button" disabled={item.status === 'CANCELLED'} onClick={() => startEdit(item)}>Editar</button><button className="link-button danger" disabled={item.status === 'CANCELLED' || item.paidAmount > 0} onClick={() => setAccountToCancel(item)}>Cancelar</button></div></td>
                 </tr>
               ))}
               {!loading && items.length === 0 ? <tr><td colSpan={9} className="empty-state">Nenhuma conta encontrada para os filtros selecionados.</td></tr> : null}
@@ -338,13 +356,18 @@ export function PayablesPage() {
           <div className="summary-grid detail-summary"><StatCard label="Previsto" value={formatCents(detail.expectedAmount)} /><StatCard label="Pago" value={formatCents(detail.paidAmount)} /><StatCard label="Pendente" value={formatCents(detail.outstandingAmount)} /><StatCard label="Status" value={statusLabel(detail.status)} /></div>
 
           {detail.status !== 'CANCELLED' && detail.outstandingAmount > 0 ? (
+            <button className="primary-button toolbar-action" type="button" onClick={() => setShowPaymentForm(true)}>Registrar pagamento manual</button>
+          ) : null}
+
+          {showPaymentForm ? (
+            <Modal title="Registrar pagamento manual" subtitle={detail.description} onClose={() => setShowPaymentForm(false)}>
             <form className="payment-form" onSubmit={submitPayment}>
-              <h3>Registrar pagamento manual</h3>
               <label>Valor (R$)<MoneyInput required placeholder="1810,00" value={paymentAmount} onChange={setPaymentAmount} /></label>
               <label>Data<input required type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
               <label>Observação<input value={paymentNotes} onChange={(event) => setPaymentNotes(event.target.value)} /></label>
               <button className="primary-button" type="submit" disabled={paymentSubmitting}>{paymentSubmitting ? 'Registrando...' : 'Registrar pagamento'}</button>
             </form>
+            </Modal>
           ) : null}
 
           <h3>Histórico de pagamentos</h3>
@@ -353,12 +376,33 @@ export function PayablesPage() {
               <div className={`payment-row ${payment.reversedAt ? 'reversed' : ''}`} key={payment._id}>
                 <div><strong>{new Date(payment.paymentDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong><span>{payment.source === 'MANUAL' ? 'Pagamento manual' : 'Transação bancária'}</span>{payment.notes ? <small>{payment.notes}</small> : null}{payment.reversedAt ? <small>Estornado: {payment.reversalReason || 'sem motivo informado'}</small> : null}</div>
                 <strong>{formatCents(payment.amount)}</strong>
-                {!payment.reversedAt && payment.source === 'MANUAL' ? <button className="link-button danger" onClick={() => reversePayment(payment)}>Estornar</button> : null}
+                {!payment.reversedAt && payment.source === 'MANUAL' ? <button className="link-button danger" onClick={() => setPaymentToReverse(payment)}>Estornar</button> : null}
               </div>
             ))}
             {payments.length === 0 ? <p className="empty-state">Nenhum pagamento registrado.</p> : null}
           </div>
         </section>
+      ) : null}
+
+      {accountToCancel ? (
+        <ConfirmDialog
+          title="Cancelar conta"
+          message={`Cancelar a conta "${accountToCancel.description}"?`}
+          confirmLabel="Cancelar conta"
+          danger
+          loading={submitting}
+          onCancel={() => setAccountToCancel(null)}
+          onConfirm={() => void cancelAccount()}
+        />
+      ) : null}
+
+      {paymentToReverse ? (
+        <Modal title="Estornar pagamento" subtitle={`Valor: ${formatCents(paymentToReverse.amount)}`} onClose={() => setPaymentToReverse(null)}>
+          <form className="form-grid compact-form" onSubmit={(event) => { event.preventDefault(); void reversePayment(); }}>
+            <label>Motivo do estorno<input value={reversalReason} onChange={(event) => setReversalReason(event.target.value)} /></label>
+            <button className="primary-button danger-button" type="submit">Estornar pagamento</button>
+          </form>
+        </Modal>
       ) : null}
     </div>
   );

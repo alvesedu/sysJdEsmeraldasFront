@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, apiErrorMessage } from '../api/client';
 import { CompetenceInput } from '../components/CompetenceInput';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '../components/Feedback';
+import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
 import { StatusBadge } from '../components/StatusBadge';
@@ -19,6 +20,7 @@ export function ChargesPage() {
   const [unitSearch, setUnitSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -64,6 +66,7 @@ export function ChargesPage() {
       const { data } = await api.post<GenerateResult>('/charges/generate', buildGenerateChargesPayload(competence));
       const existing = Math.max(data.totalUnits - data.generated, 0);
       setMessage(`${data.generated} cobrança(s) criada(s). ${existing} unidade(s) já possuíam cobrança na competência.`);
+      setShowGenerateModal(false);
       await loadCharges();
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível gerar cobranças para a competência.'));
@@ -93,8 +96,21 @@ export function ChargesPage() {
         <label>Competência<CompetenceInput value={competence} onChange={changeCompetence} required /></label>
         <label>Status<select value={status} onChange={(event) => changeStatus(event.target.value)}><option value="">Todos</option><option value="PENDING">Pendente</option><option value="PARTIAL">Parcial</option><option value="PAID">Pago</option><option value="PAID_AFTER_REFERENCE_DATE">Pago após referência</option></select></label>
         <label>Unidade<input value={unitSearch} placeholder="Quadra, número ou tipo" onChange={(event) => setUnitSearch(event.target.value)} /></label>
-        <button className="primary-button toolbar-action" onClick={generateCharges} disabled={generating || !competence}>{generating ? 'Gerando...' : 'Gerar cobranças da competência'}</button>
+        <button className="primary-button toolbar-action" onClick={() => setShowGenerateModal(true)} disabled={!competence}>Gerar cobranças da competência</button>
       </section>
+
+      {showGenerateModal ? (
+        <Modal title="Gerar cobranças" subtitle="A geração é idempotente para a competência selecionada." onClose={() => setShowGenerateModal(false)}>
+          <div className="modal-stack">
+            <label>Competência<CompetenceInput value={competence} onChange={changeCompetence} required /></label>
+            <p className="confirm-message">O backend criará cobranças apenas para unidades ativas que ainda não possuem cobrança em {formatCompetence(competence)}.</p>
+            <div className="inline-actions">
+              <button className="ghost-button" type="button" onClick={() => setShowGenerateModal(false)} disabled={generating}>Voltar</button>
+              <button className="primary-button" type="button" onClick={generateCharges} disabled={generating || !competence}>{generating ? 'Gerando...' : 'Confirmar geração'}</button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
 
       <div className="summary-grid">
         <StatCard label="Previsto" value={formatCents(totals.valueOriginal)} />

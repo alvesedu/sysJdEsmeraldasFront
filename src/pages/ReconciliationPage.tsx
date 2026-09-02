@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, apiErrorMessage } from '../api/client';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Modal } from '../components/Modal';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageHeader } from '../components/PageHeader';
 import { buildCreditAllocationPayload } from '../utils/formWorkflows';
@@ -71,6 +73,9 @@ export function ReconciliationPage() {
   const [saveAlias, setSaveAlias] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [allocationToReverse, setAllocationToReverse] = useState<Allocation | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -173,6 +178,7 @@ export function ReconciliationPage() {
       await api.post(`/bank-transactions/${detail.transaction._id}/allocate`, {
         ...payload
       });
+      setShowConfirmModal(false);
       setMessage('Crédito conciliado e cobranças atualizadas com sucesso.');
       await loadCredits(detail.transaction._id);
     } catch (caught) {
@@ -182,11 +188,12 @@ export function ReconciliationPage() {
     }
   }
 
-  async function reverseAllocation(allocation: Allocation) {
-    const reason = window.prompt('Informe o motivo do estorno:');
-    if (!reason || reason.trim().length < 3 || !detail) return;
+  async function reverseAllocation(allocation = allocationToReverse) {
+    if (!allocation || reverseReason.trim().length < 3 || !detail) return;
     try {
-      await api.post(`/payment-allocations/${allocation._id}/reverse`, { reason: reason.trim() });
+      await api.post(`/payment-allocations/${allocation._id}/reverse`, { reason: reverseReason.trim() });
+      setAllocationToReverse(null);
+      setReverseReason('');
       setMessage('Alocação estornada e saldos recalculados.');
       await loadCredits(detail.transaction._id);
     } catch (caught) {
@@ -263,15 +270,35 @@ export function ReconciliationPage() {
                   <div className="allocation-totals"><div><span>Crédito disponível</span><strong>{formatCents(detail.remainingAmount)}</strong></div><div><span>Alocado agora</span><strong>{formatCents(enteredTotal)}</strong></div><div><span>Restante projetado</span><strong className={enteredTotal > detail.remainingAmount ? 'money-debit' : ''}>{enteredTotal > detail.remainingAmount ? 'Valor excedido' : formatCents(projectedRemaining)}</strong></div></div>
 
                   <label className="alias-checkbox"><input type="checkbox" checked={saveAlias} onChange={(event) => setSaveAlias(event.target.checked)} /><span>Reconhecer este pagador automaticamente nas próximas importações</span></label>
-                  <button className="primary-button confirm-allocation" disabled={submitting || enteredTotal <= 0 || enteredTotal > detail.remainingAmount} onClick={confirmAllocation}>{submitting ? 'Confirmando...' : 'Confirmar conciliação'}</button>
+                  <button className="primary-button confirm-allocation" disabled={submitting || enteredTotal <= 0 || enteredTotal > detail.remainingAmount} onClick={() => setShowConfirmModal(true)}>{submitting ? 'Confirmando...' : 'Confirmar conciliação'}</button>
                 </div>
               ) : null}
 
-              {detail.allocations.length > 0 ? <div className="allocation-history"><h3>Histórico de alocações</h3>{detail.allocations.map((allocation) => <div className={`payment-row ${allocation.reversedAt ? 'reversed' : ''}`} key={allocation._id}><div><strong>{allocation.chargeId.competence}</strong><span>{formatDate(allocation.paymentDate)}</span>{allocation.reversalReason ? <small>{allocation.reversalReason}</small> : null}</div><strong>{formatCents(allocation.amount)}</strong>{!allocation.reversedAt ? <button className="link-button danger" onClick={() => reverseAllocation(allocation)}>Estornar</button> : <span>Estornado</span>}</div>)}</div> : null}
+              {detail.allocations.length > 0 ? <div className="allocation-history"><h3>Histórico de alocações</h3>{detail.allocations.map((allocation) => <div className={`payment-row ${allocation.reversedAt ? 'reversed' : ''}`} key={allocation._id}><div><strong>{allocation.chargeId.competence}</strong><span>{formatDate(allocation.paymentDate)}</span>{allocation.reversalReason ? <small>{allocation.reversalReason}</small> : null}</div><strong>{formatCents(allocation.amount)}</strong>{!allocation.reversedAt ? <button className="link-button danger" onClick={() => setAllocationToReverse(allocation)}>Estornar</button> : <span>Estornado</span>}</div>)}</div> : null}
             </>
           )}
         </section>
       </div>
+
+      {showConfirmModal ? (
+        <ConfirmDialog
+          title="Confirmar conciliação"
+          message={`Alocar ${formatCents(enteredTotal)} deste crédito. Restante projetado: ${formatCents(projectedRemaining)}.`}
+          confirmLabel="Confirmar conciliação"
+          loading={submitting}
+          onCancel={() => setShowConfirmModal(false)}
+          onConfirm={() => void confirmAllocation()}
+        />
+      ) : null}
+
+      {allocationToReverse ? (
+        <Modal title="Estornar alocação" subtitle={`Valor: ${formatCents(allocationToReverse.amount)}`} onClose={() => setAllocationToReverse(null)}>
+          <form className="form-grid compact-form" onSubmit={(event) => { event.preventDefault(); void reverseAllocation(); }}>
+            <label>Motivo do estorno<input required minLength={3} value={reverseReason} onChange={(event) => setReverseReason(event.target.value)} /></label>
+            <button className="primary-button danger-button" type="submit" disabled={reverseReason.trim().length < 3}>Estornar alocação</button>
+          </form>
+        </Modal>
+      ) : null}
     </div>
   );
 }
