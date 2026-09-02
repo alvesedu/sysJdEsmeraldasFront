@@ -105,7 +105,22 @@ label {
 
 .nav {
   display: grid;
-  gap: 0.55rem;
+  gap: 1rem;
+}
+
+.nav-group {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.nav-group-title {
+  margin: 0 0 0.1rem;
+  padding: 0 0.35rem;
+  color: var(--accent-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .nav-link {
@@ -905,6 +920,11 @@ th {
     border-bottom: 1px solid var(--panel-border);
   }
 
+  .nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+
   .hero-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -947,6 +967,18 @@ th {
   .sidebar,
   .auth-page {
     padding: 1rem;
+  }
+
+  .nav {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nav-group-title {
+    grid-column: 1 / -1;
   }
 
   .hero-grid {

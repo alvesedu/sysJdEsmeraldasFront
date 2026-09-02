@@ -1,17 +1,30 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
-const items = [
-  ['Dashboard', '/dashboard'],
-  ['Unidades', '/units'],
-  ['Moradores', '/residents'],
-  ['Cobranças', '/charges'],
-  ['Importações', '/imports'],
-  ['Conciliação', '/reconciliation'],
-  ['Despesas', '/expenses'],
-  ['Contas a pagar', '/payables'],
-  ['Fechamentos', '/closings'],
-  ['Categorias', '/categories'],
-  ['Auditoria', '/audit']
+const navGroups = [
+  {
+    label: 'Principal',
+    items: [['Dashboard', '/dashboard']]
+  },
+  {
+    label: 'Gerenciamento',
+    items: [
+      ['Unidades', '/units'],
+      ['Moradores', '/residents'],
+      ['Categorias', '/categories'],
+      ['Importações', '/imports'],
+      ['Auditoria', '/audit']
+    ]
+  },
+  {
+    label: 'Finanças',
+    items: [
+      ['Cobranças', '/charges'],
+      ['Conciliação', '/reconciliation'],
+      ['Despesas', '/expenses'],
+      ['Contas a pagar', '/payables'],
+      ['Fechamentos', '/closings']
+    ]
+  }
 ] as const;
 
 export function AppShell() {
@@ -25,10 +38,15 @@ export function AppShell() {
           <p className="brand-subtitle">MVP de gestão operacional</p>
         </div>
         <nav className="nav">
-          {items.map(([label, to]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              {label}
-            </NavLink>
+          {navGroups.map((group) => (
+            <section className="nav-group" key={group.label} aria-label={group.label}>
+              <p className="nav-group-title">{group.label}</p>
+              {group.items.map(([label, to]) => (
+                <NavLink key={to} to={to} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                  {label}
+                </NavLink>
+              ))}
+            </section>
           ))}
         </nav>
         <button
