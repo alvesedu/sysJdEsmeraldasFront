@@ -1,12 +1,11 @@
-import { PageHeader } from '../components/PageHeader';
+import { UnavailableModule } from '../components/UnavailableModule';
 
 export function AuditPage() {
   return (
-    <div className="page">
-      <PageHeader title="Auditoria" subtitle="Rastreabilidade básica para ajustes e estornos." />
-      <div className="panel">
-        <p>Tela preparada para exibir ações de auditoria relevantes.</p>
-      </div>
-    </div>
+    <UnavailableModule
+      title="Auditoria"
+      subtitle="Rastreabilidade básica para ajustes e estornos."
+      endpoint="GET /audit"
+    />
   );
 }

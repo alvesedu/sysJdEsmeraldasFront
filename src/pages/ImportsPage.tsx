@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { api } from '../api/client';
+import { api, apiErrorMessage } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
+import { assertPdfUpload } from '../utils/formWorkflows';
 import { formatCents } from '../utils/money';
 
 type ImportStatus = 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'REVIEW_REQUIRED' | 'FAILED';
@@ -60,7 +61,7 @@ export function ImportsPage() {
       .then(({ data }) => {
         if (active) setImports(data.items);
       })
-      .catch(() => active && setError('Não foi possível carregar as importações.'))
+      .catch((caught) => active && setError(apiErrorMessage(caught, 'Não foi possível carregar as importações.')))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -80,7 +81,7 @@ export function ImportsPage() {
       .then(({ data }) => {
         if (active) setTransactions(data.items);
       })
-      .catch(() => active && setError('Não foi possível carregar os lançamentos.'));
+      .catch((caught) => active && setError(apiErrorMessage(caught, 'Não foi possível carregar os lançamentos.')));
     return () => {
       active = false;
     };
@@ -98,8 +99,8 @@ export function ImportsPage() {
       setDirection('');
       setTransactionType('');
       setError('');
-    } catch {
-      setError('Não foi possível abrir a importação.');
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'Não foi possível abrir a importação.'));
     }
   }
 
@@ -110,6 +111,7 @@ export function ImportsPage() {
     setError('');
     setMessage('');
     try {
+      assertPdfUpload(file);
       const body = new FormData();
       body.append('file', file);
       const { data } = await api.post('/imports/bank-import', body);
@@ -271,20 +273,4 @@ function operationLabel(transaction: BankTransaction) {
 
 function transactionTypeLabel(type: TransactionType) {
   return { PIX_RECEIVED: 'Pix recebido', PIX_SENT: 'Pix enviado', TRANSFER_RECEIVED: 'Transferência recebida', TRANSFER_SENT: 'Transferência enviada', OTHER: 'Outro' }[type];
-}
-
-function apiErrorMessage(caught: unknown, fallback: string) {
-  if (caught && typeof caught === 'object' && 'response' in caught) {
-    const response = caught.response;
-    if (response && typeof response === 'object' && 'data' in response) {
-      const data = response.data;
-      if (data && typeof data === 'object' && 'error' in data) {
-        const error = data.error;
-        if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-          return error.message;
-        }
-      }
-    }
-  }
-  return fallback;
 }

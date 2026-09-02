@@ -8,7 +8,7 @@ export function formatCents(value: number) {
 }
 
 export function reaisInputToCents(value: string) {
-  const normalized = value.trim().replace(',', '.');
+  const normalized = value.trim().replace(/\./g, '').replace(',', '.');
   if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
     throw new Error('Informe um valor válido com no máximo duas casas decimais.');
   }

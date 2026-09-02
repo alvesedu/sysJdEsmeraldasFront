@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api/client';
+import { api, apiErrorMessage } from '../api/client';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageHeader } from '../components/PageHeader';
+import { buildCreditAllocationPayload } from '../utils/formWorkflows';
 import { formatCents, reaisInputToCents } from '../utils/money';
 
 type ReconciliationStatus = 'UNMATCHED' | 'PARTIALLY_MATCHED' | 'MATCHED';
@@ -89,7 +91,7 @@ export function ReconciliationPage() {
         if (active) setCredits(data.items);
       })
       .catch((caught) => {
-        if (active) setError(errorMessage(caught, 'Não foi possível carregar os créditos bancários.'));
+        if (active) setError(apiErrorMessage(caught, 'Não foi possível carregar os créditos bancários.'));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -106,7 +108,7 @@ export function ReconciliationPage() {
       setCredits(data.items);
       if (selectId) await openCredit(selectId);
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível carregar os créditos bancários.'));
+      setError(apiErrorMessage(caught, 'Não foi possível carregar os créditos bancários.'));
     } finally {
       setLoading(false);
     }
@@ -131,7 +133,7 @@ export function ReconciliationPage() {
         setAmounts({});
       }
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível abrir a conciliação.'));
+      setError(apiErrorMessage(caught, 'Não foi possível abrir a conciliação.'));
     }
   }
 
@@ -143,7 +145,7 @@ export function ReconciliationPage() {
       setCharges(data.items);
       setSuggestedAmounts(data.items, detail?.remainingAmount ?? 0);
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível carregar as cobranças da unidade.'));
+      setError(apiErrorMessage(caught, 'Não foi possível carregar as cobranças da unidade.'));
     }
   }
 
@@ -160,27 +162,21 @@ export function ReconciliationPage() {
 
   async function confirmAllocation() {
     if (!detail || !selectedUnit) return;
-    const allocations = charges.flatMap((charge) => {
-      const amount = parseMoneyToCents(amounts[charge._id] ?? '');
-      return amount > 0 ? [{ chargeId: charge._id, amount }] : [];
-    });
-    if (allocations.length === 0) {
-      setError('Informe ao menos um valor para conciliar.');
-      return;
-    }
     setSubmitting(true);
     setError('');
     setMessage('');
     try {
+      const payload = buildCreditAllocationPayload(selectedUnit._id, charges.map((charge) => ({
+        chargeId: charge._id,
+        amountText: amounts[charge._id] ?? ''
+      })), saveAlias);
       await api.post(`/bank-transactions/${detail.transaction._id}/allocate`, {
-        unitId: selectedUnit._id,
-        allocations,
-        saveAlias
+        ...payload
       });
       setMessage('Crédito conciliado e cobranças atualizadas com sucesso.');
       await loadCredits(detail.transaction._id);
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível confirmar a conciliação.'));
+      setError(apiErrorMessage(caught, 'Não foi possível confirmar a conciliação.'));
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +190,7 @@ export function ReconciliationPage() {
       setMessage('Alocação estornada e saldos recalculados.');
       await loadCredits(detail.transaction._id);
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível estornar a alocação.'));
+      setError(apiErrorMessage(caught, 'Não foi possível estornar a alocação.'));
     }
   }
 
@@ -258,7 +254,7 @@ export function ReconciliationPage() {
                     {charges.map((charge) => (
                       <div className="charge-row" key={charge._id}>
                         <div><strong>{competenceLabel(charge.competence)}</strong><span>{formatCents(charge.outstandingAmount)} pendente</span></div>
-                        <label>Alocar (R$)<input inputMode="decimal" placeholder="0,00" value={amounts[charge._id] ?? ''} onChange={(event) => setAmounts({ ...amounts, [charge._id]: event.target.value })} /></label>
+                        <label>Alocar (R$)<MoneyInput placeholder="0,00" value={amounts[charge._id] ?? ''} onChange={(value) => setAmounts({ ...amounts, [charge._id]: value })} /></label>
                       </div>
                     ))}
                     {charges.length === 0 ? <p className="empty-state">Esta unidade não possui cobranças abertas.</p> : null}
@@ -287,16 +283,3 @@ function competenceLabel(value: string) { const [year, month] = value.split('-')
 function statusLabel(status: ReconciliationStatus) { return { UNMATCHED: 'Não conciliado', PARTIALLY_MATCHED: 'Parcial', MATCHED: 'Conciliado' }[status]; }
 function typeLabel(type: string) { return { PIX_RECEIVED: 'Pix recebido', TRANSFER_RECEIVED: 'Transferência recebida', OTHER: 'Outro crédito' }[type] ?? type; }
 function parseMoneyToCents(value: string) { try { return reaisInputToCents(value); } catch { return 0; } }
-function errorMessage(caught: unknown, fallback: string) {
-  if (caught && typeof caught === 'object' && 'response' in caught) {
-    const response = caught.response;
-    if (response && typeof response === 'object' && 'data' in response) {
-      const data = response.data;
-      if (data && typeof data === 'object' && 'error' in data) {
-        const error = data.error;
-        if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
-      }
-    }
-  }
-  return fallback;
-}

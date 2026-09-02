@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { api } from '../api/client';
+import { api, apiErrorMessage } from '../api/client';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
-import { centsToReaisInput, formatCents, reaisInputToCents } from '../utils/money';
+import { centsToReaisInput, formatCents } from '../utils/money';
+import { buildManualPaymentPayload, buildPayablePayload } from '../utils/formWorkflows';
 
 type Category = { _id: string; name: string };
 type Status = 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED';
@@ -78,7 +80,10 @@ export function PayablesPage() {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [paymentNotes, setPaymentNotes] = useState('');
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -97,7 +102,7 @@ export function PayablesPage() {
         setSummary(data.summary);
         setError('');
       })
-      .catch(() => active && setError('Não foi possível carregar as contas a pagar.'))
+      .catch((caught) => active && setError(apiErrorMessage(caught, 'Não foi possível carregar as contas a pagar.')))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -108,7 +113,7 @@ export function PayablesPage() {
     api
       .get('/lookups/categories')
       .then(({ data }) => setCategories(data.items))
-      .catch(() => setError('Não foi possível carregar as categorias.'));
+      .catch((caught) => setError(apiErrorMessage(caught, 'Não foi possível carregar as categorias.')));
   }, []);
 
   async function refreshAccounts() {
@@ -130,8 +135,8 @@ export function PayablesPage() {
       setDetail(data.item);
       setPayments(data.payments);
       setError('');
-    } catch {
-      setError('Não foi possível carregar o detalhe da conta.');
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'Não foi possível carregar o detalhe da conta.'));
     }
   }
 
@@ -158,21 +163,20 @@ export function PayablesPage() {
 
   async function submitAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitting(true);
+    setError('');
+    setMessage('');
     try {
-      const payload = {
-        ...form,
-        expectedAmount: reaisInputToCents(form.expectedAmount),
-        subcategory: form.subcategory || null,
-        dueDate: form.dueDate || null,
-        notes: form.notes || null
-      };
+      const payload = buildPayablePayload(form);
       if (editingId) await api.patch(`/accounts-payable/${editingId}`, payload);
       else await api.post('/accounts-payable', payload);
       setShowForm(false);
+      setMessage(editingId ? 'Conta atualizada.' : 'Conta cadastrada.');
       await refreshAccounts();
-      setError('');
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível salvar a conta.'));
+      setError(apiErrorMessage(caught, 'Não foi possível salvar a conta.'));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -183,8 +187,8 @@ export function PayablesPage() {
       const { data } = await api.post('/lookups/categories', { name });
       setCategories((current) => [...current, data.item].sort((a, b) => a.name.localeCompare(b.name)));
       setForm((current) => ({ ...current, categoryId: data.item._id }));
-    } catch {
-      setError('Não foi possível criar a categoria.');
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'Não foi possível criar a categoria.'));
     }
   }
 
@@ -196,26 +200,27 @@ export function PayablesPage() {
       await refreshAccounts();
       setError('');
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível cancelar a conta.'));
+      setError(apiErrorMessage(caught, 'Não foi possível cancelar a conta.'));
     }
   }
 
   async function submitPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!detail) return;
+    setPaymentSubmitting(true);
+    setError('');
+    setMessage('');
     try {
-      await api.post(`/accounts-payable/${detail._id}/payments`, {
-        amount: reaisInputToCents(paymentAmount),
-        paymentDate,
-        notes: paymentNotes || null
-      });
+      await api.post(`/accounts-payable/${detail._id}/payments`, buildManualPaymentPayload({ amount: paymentAmount, paymentDate, notes: paymentNotes }));
       setPaymentAmount('');
       setPaymentNotes('');
+      setMessage('Pagamento registrado.');
       await openDetail(detail._id);
       await refreshAccounts();
-      setError('');
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível registrar o pagamento.'));
+      setError(apiErrorMessage(caught, 'Não foi possível registrar o pagamento.'));
+    } finally {
+      setPaymentSubmitting(false);
     }
   }
 
@@ -230,7 +235,7 @@ export function PayablesPage() {
       await refreshAccounts();
       setError('');
     } catch (caught) {
-      setError(errorMessage(caught, 'Não foi possível estornar o pagamento.'));
+      setError(apiErrorMessage(caught, 'Não foi possível estornar o pagamento.'));
     }
   }
 
@@ -239,6 +244,7 @@ export function PayablesPage() {
       <PageHeader title="Contas a pagar" subtitle="Obrigações que afetam o saldo disponível real." />
 
       {error ? <div className="alert error">{error}</div> : null}
+      {message ? <div className="alert success">{message}</div> : null}
 
       <div className="toolbar">
         <label>
@@ -298,10 +304,10 @@ export function PayablesPage() {
             </label>
             <label>Subcategoria<input value={form.subcategory} onChange={(event) => setForm({ ...form, subcategory: event.target.value })} /></label>
             <label>Competência<input required type="month" value={form.competence} onChange={(event) => setForm({ ...form, competence: event.target.value })} /></label>
-            <label>Valor previsto (R$)<input required inputMode="decimal" placeholder="2100,00" value={form.expectedAmount} onChange={(event) => setForm({ ...form, expectedAmount: event.target.value })} /></label>
+            <label>Valor previsto (R$)<MoneyInput required placeholder="2100,00" value={form.expectedAmount} onChange={(value) => setForm({ ...form, expectedAmount: value })} /></label>
             <label>Vencimento<input type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} /></label>
             <label className="wide-field">Observação<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
-            <button className="primary-button" type="submit">{editingId ? 'Salvar alterações' : 'Cadastrar conta'}</button>
+            <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar conta'}</button>
           </form>
         </section>
       ) : null}
@@ -334,10 +340,10 @@ export function PayablesPage() {
           {detail.status !== 'CANCELLED' && detail.outstandingAmount > 0 ? (
             <form className="payment-form" onSubmit={submitPayment}>
               <h3>Registrar pagamento manual</h3>
-              <label>Valor (R$)<input required inputMode="decimal" placeholder="1810,00" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} /></label>
+              <label>Valor (R$)<MoneyInput required placeholder="1810,00" value={paymentAmount} onChange={setPaymentAmount} /></label>
               <label>Data<input required type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
               <label>Observação<input value={paymentNotes} onChange={(event) => setPaymentNotes(event.target.value)} /></label>
-              <button className="primary-button" type="submit">Registrar pagamento</button>
+              <button className="primary-button" type="submit" disabled={paymentSubmitting}>{paymentSubmitting ? 'Registrando...' : 'Registrar pagamento'}</button>
             </form>
           ) : null}
 
@@ -368,24 +374,4 @@ function categoryNameOf(item: AccountPayable) {
 
 function statusLabel(status: Status) {
   return { PENDING: 'Pendente', PARTIAL: 'Parcial', PAID: 'Pago', CANCELLED: 'Cancelado' }[status];
-}
-
-function errorMessage(caught: unknown, fallback: string) {
-  if (
-    caught &&
-    typeof caught === 'object' &&
-    'response' in caught &&
-    caught.response &&
-    typeof caught.response === 'object' &&
-    'data' in caught.response
-  ) {
-    const data = caught.response.data;
-    if (data && typeof data === 'object' && 'error' in data) {
-      const error = data.error;
-      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-        return error.message;
-      }
-    }
-  }
-  return fallback;
 }

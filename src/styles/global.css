@@ -371,6 +371,55 @@ th {
 .status-partial { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
 .status-paid { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
 .status-cancelled { background: rgba(255, 120, 120, 0.14); color: #ffb4b4; }
+.status-ativa { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
+.status-inativa { background: rgba(255, 120, 120, 0.14); color: #ffb4b4; }
+.status-paid_after_reference_date { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
+
+.field-error,
+.muted-inline {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.mini-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mini-card span {
+  color: var(--muted);
+}
+
+.mini-card strong {
+  overflow-wrap: anywhere;
+}
+
+.compact-toolbar {
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+}
+
+.compact-form {
+  align-items: end;
+}
+
+.unavailable-panel {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 760px;
+}
+
+.unavailable-panel h2,
+.unavailable-panel p {
+  margin: 0;
+}
+
+.unavailable-panel code {
+  color: var(--accent);
+}
 
 .empty-state,
 .loading-text {
