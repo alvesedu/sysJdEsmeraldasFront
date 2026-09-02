@@ -40,6 +40,7 @@ export function ExpensesPage() {
   const [summary, setSummary] = useState({ total: 0, confirmed: 0, pendingCount: 0 });
   const [filters, setFilters] = useState({ competence: currentCompetence(), categoryId: '', classificationStatus: '', beneficiary: '' });
   const [form, setForm] = useState<ExpenseForm>(emptyForm());
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
@@ -107,6 +108,7 @@ export function ExpensesPage() {
       description: transaction?.description ?? '',
       competence: filters.competence || currentCompetence()
     });
+    setAttachmentFile(null);
     setShowForm(true);
     setMessage('');
   }
@@ -124,6 +126,7 @@ export function ExpensesPage() {
       attachmentUrl: expense.attachmentUrl ?? '',
       classificationStatus: expense.classificationStatus
     });
+    setAttachmentFile(null);
     setShowForm(true);
     setMessage('');
   }
@@ -135,10 +138,19 @@ export function ExpensesPage() {
     setMessage('');
     try {
       const payload = buildExpensePayload(form);
-      if (editingId) await api.patch(`/expenses/${editingId}`, payload);
-      else await api.post('/expenses', payload);
+      const response = editingId
+        ? await api.patch(`/expenses/${editingId}`, payload)
+        : await api.post('/expenses', payload);
+      if (attachmentFile) {
+        const upload = new FormData();
+        upload.append('file', attachmentFile);
+        await api.post(`/expenses/${response.data.item._id}/attachment`, upload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
       setShowForm(false);
-      setMessage(editingId ? 'Despesa atualizada.' : 'Despesa cadastrada.');
+      setAttachmentFile(null);
+      setMessage(attachmentFile ? 'Despesa e anexo salvos.' : editingId ? 'Despesa atualizada.' : 'Despesa cadastrada.');
       await loadExpenses();
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível salvar a despesa.'));
@@ -217,7 +229,7 @@ export function ExpensesPage() {
                   <tr key={expense._id}>
                     <td>{formatCompetence(expense.competence)}</td><td>{expense.beneficiary}</td><td>{expense.description}</td><td>{categoryNameOf(expense)}</td><td>{formatCents(transaction?.amount ?? 0)}</td>
                     <td><StatusBadge value={expense.classificationStatus} label={statusLabel(expense.classificationStatus)} /></td>
-                    <td>{expense.attachmentUrl ? <a className="link-button" href={expense.attachmentUrl} target="_blank" rel="noreferrer">Abrir</a> : 'Sem anexo'}</td>
+                    <td>{expense.attachmentUrl ? <a className="link-button" href={attachmentHref(expense.attachmentUrl)} target="_blank" rel="noreferrer">Abrir</a> : 'Sem anexo'}</td>
                     <td><div className="row-actions"><button className="link-button" onClick={() => startEdit(expense)}>Editar</button><button className="link-button danger" onClick={() => setExpenseToDelete(expense)}>Remover</button></div></td>
                   </tr>
                 );
@@ -230,7 +242,7 @@ export function ExpensesPage() {
       </section>
 
       {showForm ? (
-        <Modal title={editingId ? 'Editar despesa' : 'Nova despesa'} subtitle="Classifique débitos bancários ou registre uma despesa documental." onClose={() => setShowForm(false)}>
+        <Modal title={editingId ? 'Editar despesa' : 'Nova despesa'} subtitle="Classifique débitos bancários ou registre uma despesa documental." onClose={() => { setShowForm(false); setAttachmentFile(null); }}>
           <form className="form-grid" onSubmit={submitExpense}>
             <label>Débito bancário<select value={form.bankTransactionId} onChange={(event) => setForm({ ...form, bankTransactionId: event.target.value })}><option value="">Sem vínculo bancário</option>{debits.map((transaction) => <option key={transaction._id} value={transaction._id}>{formatDate(transaction.operationDate ?? transaction.postingDate)} · {formatCents(transaction.amount)} · {transaction.description}</option>)}</select></label>
             <label>Categoria<select required value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}><option value="">Selecione</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select></label>
@@ -239,6 +251,7 @@ export function ExpensesPage() {
             <label className="wide-field">Descrição<input required value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
             <label>Status<select value={form.classificationStatus} onChange={(event) => setForm({ ...form, classificationStatus: event.target.value as ExpenseForm['classificationStatus'] })}><option value="PENDING">Pendente</option><option value="SUGGESTED">Sugerida</option><option value="CONFIRMED">Confirmada</option></select></label>
             <label>Anexo URL<input value={form.attachmentUrl} onChange={(event) => setForm({ ...form, attachmentUrl: event.target.value })} /></label>
+            <label className="file-field">Anexo arquivo<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setAttachmentFile(event.target.files?.[0] ?? null)} /></label>
             <label className="wide-field">Observações<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
             <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar despesa'}</button>
           </form>
@@ -270,6 +283,11 @@ function categoryNameOf(expense: Expense) {
 
 function statusLabel(status: Expense['classificationStatus']) {
   return { PENDING: 'Pendente', SUGGESTED: 'Sugerida', CONFIRMED: 'Confirmada' }[status];
+}
+
+function attachmentHref(value: string) {
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${api.defaults.baseURL}${value.startsWith('/') ? value : `/${value}`}`;
 }
 
 function formatDate(value: string) {

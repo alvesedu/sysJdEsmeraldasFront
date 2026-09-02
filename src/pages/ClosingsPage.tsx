@@ -127,8 +127,12 @@ export function ClosingsPage() {
       <div className="summary-grid">
         <StatCard label="Receita prevista" value={formatCents(dashboard?.revenueForecast ?? 0)} />
         <StatCard label="Recebido" value={formatCents(dashboard?.revenueReceived ?? 0)} />
+        <StatCard label="Recebido até venc." value={formatCents(dashboard?.revenueReceivedBeforeRef ?? 0)} />
+        <StatCard label="Recebido após venc." value={formatCents(dashboard?.revenueReceivedAfterRef ?? 0)} />
         <StatCard label="Pendente" value={formatCents(dashboard?.revenuePending ?? 0)} />
         <StatCard label="Despesas pagas" value={formatCents(dashboard?.expensePaid ?? 0)} />
+        <StatCard label="Entradas bancárias" value={formatCents(dashboard?.bankInflow ?? 0)} />
+        <StatCard label="Saídas bancárias" value={formatCents(dashboard?.bankOutflow ?? 0)} />
         <StatCard label="Compromissos abertos" value={formatCents(dashboard?.openCommitments ?? 0)} />
         <StatCard label="Saldo disponível" value={formatCents(dashboard?.availableBalance ?? 0)} />
       </div>
@@ -136,18 +140,18 @@ export function ClosingsPage() {
       <section className="panel table-panel">
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Competência</th><th>Status</th><th>Receita</th><th>Recebido</th><th>Pendente</th><th>Despesas pagas</th><th>Saldo disponível</th><th>Notas</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Competência</th><th>Status</th><th>Receita</th><th>Recebido</th><th>Entradas</th><th>Saídas</th><th>Saldo inicial</th><th>Saldo final</th><th>Saldo disponível</th><th>Notas</th><th>Ações</th></tr></thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item._id}>
                   <td>{formatCompetence(item.competence)}</td>
                   <td><StatusBadge value={item.status === 'OPEN' ? 'PARTIAL' : 'PAID'} label={item.status === 'OPEN' ? 'Aberto' : 'Fechado'} /></td>
-                  <td>{formatCents(item.revenueForecast)}</td><td>{formatCents(item.revenueReceived)}</td><td>{formatCents(item.revenuePending)}</td><td>{formatCents(item.expensePaid)}</td><td>{formatCents(item.availableBalance)}</td>
+                  <td>{formatCents(item.revenueForecast)}</td><td>{formatCents(item.revenueReceived)}</td><td>{formatCents(item.bankInflow)}</td><td>{formatCents(item.bankOutflow)}</td><td>{formatCents(item.openingBankBalance)}</td><td>{formatCents(item.closingBankBalance)}</td><td>{formatCents(item.availableBalance)}</td>
                   <td>{item.notes ?? 'Sem notas'}</td>
                   <td><button className="link-button" onClick={() => openStatusModal(item)}>Editar status</button></td>
                 </tr>
               ))}
-              {!loading && items.length === 0 ? <tr><td colSpan={9}><EmptyState>Nenhum fechamento salvo para esta competência.</EmptyState></td></tr> : null}
+              {!loading && items.length === 0 ? <tr><td colSpan={11}><EmptyState>Nenhum fechamento salvo para esta competência.</EmptyState></td></tr> : null}
             </tbody>
           </table>
         </div>

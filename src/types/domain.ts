@@ -56,6 +56,17 @@ export type BankTransaction = {
   transactionType: string;
 };
 
+export type AuditLog = {
+  _id: string;
+  userId: { _id: string; name?: string; email?: string } | string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  before: unknown;
+  after: unknown;
+  createdAt: string;
+};
+
 export type Expense = {
   _id: string;
   bankTransactionId: BankTransaction | string | null;
@@ -66,6 +77,8 @@ export type Expense = {
   notes: string | null;
   attachmentUrl: string | null;
   classificationStatus: 'PENDING' | 'SUGGESTED' | 'CONFIRMED';
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type MonthlyClosing = {
@@ -74,10 +87,15 @@ export type MonthlyClosing = {
   status: 'OPEN' | 'CLOSED';
   revenueForecast: number;
   revenueReceived: number;
+  revenueReceivedBeforeRef: number;
+  revenueReceivedAfterRef: number;
   revenuePending: number;
   pendingUnitsCount: number;
   expenseForecast: number;
   expensePaid: number;
+  openingBankBalance: number;
+  bankInflow: number;
+  bankOutflow: number;
   closingBankBalance: number;
   openCommitments: number;
   availableBalance: number;
