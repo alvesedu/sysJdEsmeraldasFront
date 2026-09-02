@@ -374,6 +374,8 @@ th {
 .status-ativa { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
 .status-inativa { background: rgba(255, 120, 120, 0.14); color: #ffb4b4; }
 .status-paid_after_reference_date { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
+.status-suggested { background: rgba(91, 169, 255, 0.18); color: #a8d2ff; }
+.status-confirmed { background: rgba(65, 200, 140, 0.18); color: #8de3ba; }
 
 .field-error,
 .muted-inline {

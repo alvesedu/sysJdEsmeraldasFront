@@ -44,3 +44,42 @@ export type Category = {
   active: boolean;
   defaultCounterpartyPattern: string | null;
 };
+
+export type BankTransaction = {
+  _id: string;
+  postingDate: string;
+  operationDate: string | null;
+  description: string;
+  counterpartyOriginalName: string | null;
+  amount: number;
+  direction: 'CREDIT' | 'DEBIT';
+  transactionType: string;
+};
+
+export type Expense = {
+  _id: string;
+  bankTransactionId: BankTransaction | string | null;
+  categoryId: Category | string;
+  beneficiary: string;
+  description: string;
+  competence: string;
+  notes: string | null;
+  attachmentUrl: string | null;
+  classificationStatus: 'PENDING' | 'SUGGESTED' | 'CONFIRMED';
+};
+
+export type MonthlyClosing = {
+  _id: string;
+  competence: string;
+  status: 'OPEN' | 'CLOSED';
+  revenueForecast: number;
+  revenueReceived: number;
+  revenuePending: number;
+  pendingUnitsCount: number;
+  expenseForecast: number;
+  expensePaid: number;
+  closingBankBalance: number;
+  openCommitments: number;
+  availableBalance: number;
+  notes: string | null;
+};

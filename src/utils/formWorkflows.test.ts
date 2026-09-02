@@ -3,8 +3,10 @@ import { describe, it } from 'node:test';
 import {
   assertPdfUpload,
   buildCreditAllocationPayload,
+  buildExpensePayload,
   buildGenerateChargesPayload,
   buildManualPaymentPayload,
+  buildMonthlyClosingPayload,
   buildPayablePayload,
   buildResidentPayload,
   buildUnitPayload
@@ -85,5 +87,34 @@ describe('frontend operational form workflows', () => {
     assert.doesNotThrow(() => assertPdfUpload({ name: 'extrato.pdf', type: '', size: 1024 }));
     assert.throws(() => assertPdfUpload({ name: 'extrato.txt', type: 'text/plain', size: 1024 }), /PDF/);
     assert.throws(() => assertPdfUpload({ name: 'extrato.pdf', type: 'application/pdf', size: 11 * 1024 * 1024 }), /10 MB/);
+  });
+
+  it('builds expense classification payload without inventing an amount', () => {
+    assert.deepEqual(buildExpensePayload({
+      bankTransactionId: '507f1f77bcf86cd799439012',
+      categoryId: '507f1f77bcf86cd799439011',
+      beneficiary: 'Fornecedor',
+      description: 'Manutenção',
+      competence: '2026-09',
+      notes: '',
+      attachmentUrl: '',
+      classificationStatus: 'CONFIRMED'
+    }), {
+      bankTransactionId: '507f1f77bcf86cd799439012',
+      categoryId: '507f1f77bcf86cd799439011',
+      beneficiary: 'Fornecedor',
+      description: 'Manutenção',
+      competence: '2026-09',
+      notes: null,
+      attachmentUrl: null,
+      classificationStatus: 'CONFIRMED'
+    });
+  });
+
+  it('builds monthly closing snapshot payload', () => {
+    assert.deepEqual(buildMonthlyClosingPayload({ competence: '2026-09', notes: 'Fechamento validado' }), {
+      competence: '2026-09',
+      notes: 'Fechamento validado'
+    });
   });
 });

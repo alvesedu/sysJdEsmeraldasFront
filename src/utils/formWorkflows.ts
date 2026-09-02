@@ -15,6 +15,17 @@ type PayableFormInput = {
 };
 type PaymentFormInput = { amount: string; paymentDate: string; notes: string };
 type AllocationInput = { chargeId: string; amountText: string };
+type ExpenseFormInput = {
+  bankTransactionId: string;
+  categoryId: string;
+  beneficiary: string;
+  description: string;
+  competence: string;
+  notes: string;
+  attachmentUrl: string;
+  classificationStatus: 'PENDING' | 'SUGGESTED' | 'CONFIRMED';
+};
+type MonthlyClosingInput = { competence: string; notes: string };
 
 export function buildUnitPayload(input: UnitFormInput, existingUnits: Unit[], editingId?: string | null) {
   const payload = {
@@ -85,6 +96,26 @@ export function assertPdfUpload(file: Pick<File, 'name' | 'type' | 'size'>) {
   const isPdf = file.type === 'application/pdf' || file.name.toLocaleLowerCase('pt-BR').endsWith('.pdf');
   if (!isPdf) throw new Error('Envie um arquivo PDF.');
   if (file.size > 10 * 1024 * 1024) throw new Error('PDF excede o limite de 10 MB.');
+}
+
+export function buildExpensePayload(input: ExpenseFormInput) {
+  return {
+    bankTransactionId: optional(input.bankTransactionId),
+    categoryId: required(input.categoryId, 'Categoria'),
+    beneficiary: required(input.beneficiary, 'Favorecido'),
+    description: required(input.description, 'Descrição'),
+    competence: buildGenerateChargesPayload(input.competence).competence,
+    notes: optional(input.notes),
+    attachmentUrl: optional(input.attachmentUrl),
+    classificationStatus: input.classificationStatus
+  };
+}
+
+export function buildMonthlyClosingPayload(input: MonthlyClosingInput) {
+  return {
+    competence: buildGenerateChargesPayload(input.competence).competence,
+    notes: optional(input.notes)
+  };
 }
 
 function required(value: string, label: string) {
