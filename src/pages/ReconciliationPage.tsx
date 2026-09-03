@@ -77,6 +77,7 @@ export function ReconciliationPage() {
   const [saveAlias, setSaveAlias] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [generatingCharges, setGeneratingCharges] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [allocationToReverse, setAllocationToReverse] = useState<Allocation | null>(null);
   const [reverseReason, setReverseReason] = useState('');
@@ -131,12 +132,13 @@ export function ReconciliationPage() {
       const next = data as Detail;
       setDetail(next);
       setSaveAlias(next.suggestionReason !== 'BANK_ALIAS');
-      setPaymentCompetence(defaultPaymentCompetence(next.transaction));
+      const initialCompetence = preferredPaymentCompetence(next.transaction, next.openCharges);
+      setPaymentCompetence(initialCompetence);
       if (next.suggestedUnit) {
         setSelectedUnit(next.suggestedUnit);
         setSelectedResidentId(residentIdOfUnit(next.suggestedUnit));
         setUnitSearch(unitLabel(next.suggestedUnit));
-        const filteredCharges = filterChargesByCompetence(next.openCharges, defaultPaymentCompetence(next.transaction));
+        const filteredCharges = filterChargesByCompetence(next.openCharges, initialCompetence);
         setCharges(filteredCharges);
         setSuggestedAmounts(filteredCharges, next.remainingAmount);
       } else {
@@ -181,6 +183,22 @@ export function ReconciliationPage() {
   async function changePaymentCompetence(value: string) {
     setPaymentCompetence(value);
     if (selectedUnit) await chooseUnit(selectedUnit, value);
+  }
+
+  async function generateChargesForPaymentCompetence() {
+    if (!selectedUnit) return;
+    setGeneratingCharges(true);
+    setError('');
+    setMessage('');
+    try {
+      await api.post('/charges/generate', { competence: paymentCompetence });
+      await chooseUnit(selectedUnit, paymentCompetence);
+      setMessage(`Cobranças de ${formatCompetence(paymentCompetence)} geradas. Revise o valor e confirme a conciliação.`);
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'Não foi possível gerar a cobrança desta competência.'));
+    } finally {
+      setGeneratingCharges(false);
+    }
   }
 
   function setSuggestedAmounts(openCharges: Charge[], available: number) {
@@ -295,7 +313,14 @@ export function ReconciliationPage() {
                         <label>Alocar (R$)<MoneyInput placeholder="0,00" value={amounts[charge._id] ?? ''} onChange={(value) => setAmounts({ ...amounts, [charge._id]: value })} /></label>
                       </div>
                     ))}
-                    {charges.length === 0 ? <p className="empty-state">Esta unidade não possui cobrança aberta para {formatCompetence(paymentCompetence)}.</p> : null}
+                    {charges.length === 0 ? (
+                      <div className="empty-state reconciliation-empty-charge">
+                        <p>Esta unidade não possui cobrança aberta para {formatCompetence(paymentCompetence)}.</p>
+                        <button className="primary-button" type="button" disabled={generatingCharges} onClick={() => void generateChargesForPaymentCompetence()}>
+                          {generatingCharges ? 'Gerando...' : 'Gerar cobrança deste mês'}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="allocation-totals"><div><span>Crédito disponível</span><strong>{formatCents(detail.remainingAmount)}</strong></div><div><span>Alocado agora</span><strong>{formatCents(enteredTotal)}</strong></div><div><span>Restante projetado</span><strong className={enteredTotal > detail.remainingAmount ? 'money-debit' : ''}>{enteredTotal > detail.remainingAmount ? 'Valor excedido' : formatCents(projectedRemaining)}</strong></div></div>
@@ -351,9 +376,12 @@ function paymentCompetenceOptions() {
   ];
 }
 
-function defaultPaymentCompetence(transaction: Credit) {
+function preferredPaymentCompetence(transaction: Credit, charges: Charge[]) {
+  const optionValues = paymentCompetenceOptions().map((option) => option.value);
+  const firstOpenCharge = optionValues.find((competence) => charges.some((charge) => charge.competence === competence));
+  if (firstOpenCharge) return firstOpenCharge;
   const transactionCompetence = (transaction.operationDate ?? transaction.postingDate).slice(0, 7);
-  return paymentCompetenceOptions().some((option) => option.value === transactionCompetence)
+  return optionValues.includes(transactionCompetence)
     ? transactionCompetence
     : currentCompetence();
 }

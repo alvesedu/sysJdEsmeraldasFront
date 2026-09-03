@@ -801,6 +801,19 @@ th {
   gap: 0.55rem;
 }
 
+.reconciliation-empty-charge {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  border: 1px dashed rgba(247, 185, 85, 0.35);
+  border-radius: 14px;
+  background: rgba(247, 185, 85, 0.06);
+}
+
+.reconciliation-empty-charge p {
+  margin: 0;
+}
+
 .charge-row {
   display: grid;
   grid-template-columns: 1fr 170px;
