@@ -31,8 +31,17 @@ export function apiErrorMessage(caught: unknown, fallback: string) {
       return 'Operação temporariamente indisponível porque o banco de dados não está pronto para transações financeiras.';
     }
     const data = caught.response?.data as { error?: { message?: string } } | undefined;
-    return data?.error?.message ?? fallback;
+    return translateApiMessage(data?.error?.message) ?? fallback;
   }
   if (caught instanceof Error) return caught.message;
   return fallback;
+}
+
+function translateApiMessage(message?: string) {
+  if (!message) return undefined;
+  const messages: Record<string, string> = {
+    'Resident is already linked to another unit': 'Este morador já está vinculado a outra unidade.',
+    'Resident is already current in another unit': 'Este morador já é o morador atual de outra unidade.'
+  };
+  return messages[message] ?? message;
 }

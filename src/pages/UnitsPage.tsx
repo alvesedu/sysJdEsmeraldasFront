@@ -54,6 +54,11 @@ export function UnitsPage() {
     });
   }, [filters, units]);
 
+  const residentOptions = useMemo(() => {
+    if (!detail) return [];
+    return residents.filter((resident) => canResidentBeSelectedForUnit(resident, detail.item._id));
+  }, [detail, residents]);
+
   function startCreate() {
     setEditingId(null);
     setForm(emptyForm);
@@ -104,6 +109,11 @@ export function UnitsPage() {
   async function submitResidentChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!detail) return;
+    const selectedResident = residents.find((resident) => resident._id === residentId);
+    if (selectedResident && !canResidentBeSelectedForUnit(selectedResident, detail.item._id)) {
+      setError('Este morador já está vinculado a outra unidade. Remova o vínculo anterior antes de selecionar aqui.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     setMessage('');
@@ -182,7 +192,7 @@ export function UnitsPage() {
               <div className="mini-card"><span>Moradores vinculados</span><strong>{detail.residents.length}</strong></div>
             </div>
             <form className="form-grid compact-form" onSubmit={submitResidentChange}>
-              <label>Morador atual<select value={residentId} onChange={(event) => setResidentId(event.target.value)}><option value="">Sem morador atual</option>{residents.map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
+              <label>Morador atual<select value={residentId} onChange={(event) => setResidentId(event.target.value)}><option value="">Sem morador atual</option>{residentOptions.map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
               <p className="form-hint">A troca preserva o histórico da unidade e não altera cobranças, pagamentos ou conciliações.</p>
               <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Atualizar morador atual'}</button>
             </form>
@@ -196,6 +206,16 @@ export function UnitsPage() {
 function residentLabel(resident: Resident) {
   const unit = resident.unitId && typeof resident.unitId !== 'string' ? resident.unitId : null;
   return unit ? `${resident.name} · ${unitLabel(unit)}` : resident.name;
+}
+
+function canResidentBeSelectedForUnit(resident: Resident, unitId: string) {
+  const linkedUnitId = residentLinkedUnitId(resident);
+  return !linkedUnitId || linkedUnitId === unitId;
+}
+
+function residentLinkedUnitId(resident: Resident) {
+  if (!resident.unitId) return null;
+  return typeof resident.unitId === 'string' ? resident.unitId : resident.unitId._id;
 }
 
 function unitLabel(unit: Unit) {
