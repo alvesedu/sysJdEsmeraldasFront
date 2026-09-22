@@ -40,12 +40,11 @@ describe('frontend operational form workflows', () => {
     });
   });
 
-  it('builds resident payload with optional unit link', () => {
+  it('builds resident payload without changing the unit link', () => {
     assert.deepEqual(buildResidentPayload({ name: ' Maria ', phone: '', email: 'maria@test.local', unitId: 'unit-1', active: true }), {
       name: 'Maria',
       phone: null,
       email: 'maria@test.local',
-      unitId: 'unit-1',
       active: true
     });
   });

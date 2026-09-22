@@ -51,7 +51,6 @@ export function buildResidentPayload(input: ResidentFormInput) {
     name: required(input.name, 'Nome'),
     phone: optional(input.phone),
     email: optional(input.email),
-    unitId: optional(input.unitId),
     active: input.active
   };
 }

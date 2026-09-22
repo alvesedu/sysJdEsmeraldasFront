@@ -105,12 +105,12 @@ export function ResidentsPage() {
       </section>
 
       {showForm ? (
-        <Modal title={editingId ? 'Editar morador' : 'Novo morador'} subtitle="Vincule a unidade atual quando houver ocupação ativa." onClose={() => setShowForm(false)}>
+        <Modal title={editingId ? 'Editar morador' : 'Novo morador'} subtitle="Dados cadastrais do morador. O vínculo com unidade é alterado pela tela de Unidades." onClose={() => setShowForm(false)}>
           <form className="form-grid" onSubmit={submitResident}>
             <label>Nome<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
             <label>Telefone<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label>
             <label>E-mail<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
-            <label>Unidade atual<select value={form.unitId} onChange={(event) => setForm({ ...form, unitId: event.target.value })}><option value="">Sem unidade</option>{units.map((unit) => <option key={unit._id} value={unit._id}>{unitLabel(unit)}</option>)}</select></label>
+            <p className="form-hint">Para vincular, trocar ou remover unidade, use a ação de morador atual na tela de Unidades.</p>
             <label>Situação<select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm({ ...form, active: event.target.value === 'active' })}><option value="active">Ativo</option><option value="inactive">Inativo</option></select></label>
             <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar morador'}</button>
           </form>

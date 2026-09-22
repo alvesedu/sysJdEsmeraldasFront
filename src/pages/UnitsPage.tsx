@@ -6,7 +6,7 @@ import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCents } from '../utils/money';
 import { buildUnitPayload } from '../utils/formWorkflows';
-import type { Unit, UnitStatus, UnitType } from '../types/domain';
+import type { Resident, Unit, UnitStatus, UnitType } from '../types/domain';
 
 type UnitForm = { quadra: string; numero: string; tipo: UnitType; status: UnitStatus };
 
@@ -14,8 +14,10 @@ const emptyForm: UnitForm = { quadra: '', numero: '', tipo: 'CASA', status: 'ATI
 
 export function UnitsPage() {
   const [units, setUnits] = useState<Unit[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
   const [detail, setDetail] = useState<{ item: Unit; residents: unknown[] } | null>(null);
   const [form, setForm] = useState<UnitForm>(emptyForm);
+  const [residentId, setResidentId] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState({ quadra: '', numero: '', tipo: '', status: '' });
@@ -31,8 +33,9 @@ export function UnitsPage() {
   async function loadUnits() {
     setLoading(true);
     try {
-      const { data } = await api.get('/units');
-      setUnits(data.items);
+      const [unitResponse, residentResponse] = await Promise.all([api.get('/units'), api.get('/residents')]);
+      setUnits(unitResponse.data.items);
+      setResidents(residentResponse.data.items);
       setError('');
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível carregar as unidades.'));
@@ -71,6 +74,7 @@ export function UnitsPage() {
     try {
       const { data } = await api.get(`/units/${id}`);
       setDetail(data);
+      setResidentId(data.item.residentCurrentId?._id ?? '');
       setError('');
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível abrir a unidade.'));
@@ -92,6 +96,25 @@ export function UnitsPage() {
       if (editingId) await openDetail(editingId);
     } catch (caught) {
       setError(apiErrorMessage(caught, 'Não foi possível salvar a unidade. Verifique duplicidade de quadra, número e tipo.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitResidentChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!detail) return;
+    setSubmitting(true);
+    setError('');
+    setMessage('');
+    try {
+      const { data } = await api.post(`/units/${detail.item._id}/resident`, { residentId: residentId || null });
+      setDetail({ ...detail, item: data.item });
+      setMessage(residentId ? 'Morador atual atualizado.' : 'Unidade ficou sem morador atual.');
+      await loadUnits();
+      await openDetail(detail.item._id);
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'Não foi possível alterar o morador atual da unidade.'));
     } finally {
       setSubmitting(false);
     }
@@ -149,8 +172,22 @@ export function UnitsPage() {
         <section className="panel operational-panel">
           <div className="section-heading"><div><p className="eyebrow">Detalhes</p><h2>Quadra {detail.item.quadra} · {detail.item.tipo === 'CASA' ? 'Casa' : 'Lote'} {detail.item.numero}</h2><p>{detail.item.residentCurrentId?.name ?? 'Sem morador atual'}</p></div><button className="ghost-button compact" onClick={() => setDetail(null)}>Fechar</button></div>
           <div className="summary-grid detail-summary"><div className="mini-card"><span>Status</span><strong>{detail.item.status}</strong></div><div className="mini-card"><span>Mensalidade</span><strong>{formatCents(detail.item.monthlyValue)}</strong></div><div className="mini-card"><span>Chave</span><strong>{detail.item.unitKey}</strong></div><div className="mini-card"><span>Moradores vinculados</span><strong>{detail.residents.length}</strong></div></div>
+          <form className="form-grid compact-form" onSubmit={submitResidentChange}>
+            <label>Morador atual<select value={residentId} onChange={(event) => setResidentId(event.target.value)}><option value="">Sem morador atual</option>{residents.map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
+            <p className="form-hint">A troca preserva o histórico da unidade e não altera cobranças, pagamentos ou conciliações.</p>
+            <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Atualizar morador atual'}</button>
+          </form>
         </section>
       ) : null}
     </div>
   );
+}
+
+function residentLabel(resident: Resident) {
+  const unit = resident.unitId && typeof resident.unitId !== 'string' ? resident.unitId : null;
+  return unit ? `${resident.name} · ${unitLabel(unit)}` : resident.name;
+}
+
+function unitLabel(unit: Unit) {
+  return `Quadra ${unit.quadra} · ${unit.tipo === 'CASA' ? 'Casa' : 'Lote'} ${unit.numero}`;
 }
