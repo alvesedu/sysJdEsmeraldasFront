@@ -6,6 +6,10 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "types": ["node", "vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
