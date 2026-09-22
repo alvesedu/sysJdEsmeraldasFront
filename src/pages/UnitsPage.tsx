@@ -114,10 +114,11 @@ export function UnitsPage() {
       {showForm ? (
         <Modal title={editingId ? 'Editar unidade' : 'Nova unidade'} subtitle="Campos obrigatórios: quadra, número e tipo." onClose={() => setShowForm(false)}>
           <form className="form-grid compact-form" onSubmit={submitUnit}>
-            <label>Quadra<input required value={form.quadra} onChange={(event) => setForm({ ...form, quadra: event.target.value })} /></label>
-            <label>Número<input required value={form.numero} onChange={(event) => setForm({ ...form, numero: event.target.value })} /></label>
-            <label>Tipo<select required value={form.tipo} onChange={(event) => setForm({ ...form, tipo: event.target.value as UnitType })}><option value="CASA">Casa</option><option value="LOTE">Lote</option></select></label>
+            <label>Quadra<input required disabled={Boolean(editingId)} value={form.quadra} onChange={(event) => setForm({ ...form, quadra: event.target.value })} /></label>
+            <label>Número<input required disabled={Boolean(editingId)} value={form.numero} onChange={(event) => setForm({ ...form, numero: event.target.value })} /></label>
+            <label>Tipo<select required disabled={Boolean(editingId)} value={form.tipo} onChange={(event) => setForm({ ...form, tipo: event.target.value as UnitType })}><option value="CASA">Casa</option><option value="LOTE">Lote</option></select></label>
             <label>Situação<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as UnitStatus })}><option value="ATIVA">Ativa</option><option value="INATIVA">Inativa</option></select></label>
+            {editingId ? <p className="form-hint">Quadra, número e tipo formam a identidade patrimonial da unidade e não são alterados por esta edição.</p> : null}
             <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar unidade'}</button>
           </form>
         </Modal>

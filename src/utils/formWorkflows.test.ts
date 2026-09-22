@@ -34,6 +34,12 @@ describe('frontend operational form workflows', () => {
     assert.throws(() => buildUnitPayload({ quadra: 'a', numero: '10', tipo: 'CASA', status: 'ATIVA' }, [unit]), /Já existe unidade/);
   });
 
+  it('builds unit update payload without patrimonial identity fields', () => {
+    assert.deepEqual(buildUnitPayload({ quadra: ' F ', numero: ' 22 ', tipo: 'LOTE', status: 'INATIVA' }, [unit], unit._id), {
+      status: 'INATIVA'
+    });
+  });
+
   it('builds resident payload with optional unit link', () => {
     assert.deepEqual(buildResidentPayload({ name: ' Maria ', phone: '', email: 'maria@test.local', unitId: 'unit-1', active: true }), {
       name: 'Maria',

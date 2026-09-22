@@ -28,6 +28,8 @@ type ExpenseFormInput = {
 type MonthlyClosingInput = { competence: string; notes: string };
 
 export function buildUnitPayload(input: UnitFormInput, existingUnits: Unit[], editingId?: string | null) {
+  if (editingId) return { status: input.status };
+
   const payload = {
     quadra: required(input.quadra, 'Quadra'),
     numero: required(input.numero, 'Número'),
