@@ -382,6 +382,7 @@ label {
 .inline-field,
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
 }
@@ -946,13 +947,15 @@ th {
 }
 
 .modal-panel {
-  width: min(900px, 100%);
+  width: min(940px, 100%);
   max-height: min(86vh, 920px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--panel-border);
   border-radius: 22px;
-  background: #101a31;
+  background:
+    linear-gradient(160deg, rgba(247, 185, 85, 0.06), transparent 34%),
+    #101a31;
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -992,7 +995,13 @@ th {
 
 .modal-stack {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+.modal-stack .summary-grid,
+.modal-stack .detail-summary,
+.modal-stack form {
+  grid-column: 1 / -1;
 }
 
 .modal-stack .confirm-message,

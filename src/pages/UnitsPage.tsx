@@ -169,15 +169,25 @@ export function UnitsPage() {
       </section>
 
       {detail ? (
-        <section className="panel operational-panel">
-          <div className="section-heading"><div><p className="eyebrow">Detalhes</p><h2>Quadra {detail.item.quadra} · {detail.item.tipo === 'CASA' ? 'Casa' : 'Lote'} {detail.item.numero}</h2><p>{detail.item.residentCurrentId?.name ?? 'Sem morador atual'}</p></div><button className="ghost-button compact" onClick={() => setDetail(null)}>Fechar</button></div>
-          <div className="summary-grid detail-summary"><div className="mini-card"><span>Status</span><strong>{detail.item.status}</strong></div><div className="mini-card"><span>Mensalidade</span><strong>{formatCents(detail.item.monthlyValue)}</strong></div><div className="mini-card"><span>Chave</span><strong>{detail.item.unitKey}</strong></div><div className="mini-card"><span>Moradores vinculados</span><strong>{detail.residents.length}</strong></div></div>
-          <form className="form-grid compact-form" onSubmit={submitResidentChange}>
-            <label>Morador atual<select value={residentId} onChange={(event) => setResidentId(event.target.value)}><option value="">Sem morador atual</option>{residents.map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
-            <p className="form-hint">A troca preserva o histórico da unidade e não altera cobranças, pagamentos ou conciliações.</p>
-            <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Atualizar morador atual'}</button>
-          </form>
-        </section>
+        <Modal
+          title={`Quadra ${detail.item.quadra} · ${detail.item.tipo === 'CASA' ? 'Casa' : 'Lote'} ${detail.item.numero}`}
+          subtitle={detail.item.residentCurrentId?.name ? `Morador atual: ${detail.item.residentCurrentId.name}` : 'Sem morador atual'}
+          onClose={() => setDetail(null)}
+        >
+          <div className="modal-stack">
+            <div className="summary-grid detail-summary">
+              <div className="mini-card"><span>Status</span><strong>{detail.item.status}</strong></div>
+              <div className="mini-card"><span>Mensalidade</span><strong>{formatCents(detail.item.monthlyValue)}</strong></div>
+              <div className="mini-card"><span>Chave</span><strong>{detail.item.unitKey}</strong></div>
+              <div className="mini-card"><span>Moradores vinculados</span><strong>{detail.residents.length}</strong></div>
+            </div>
+            <form className="form-grid compact-form" onSubmit={submitResidentChange}>
+              <label>Morador atual<select value={residentId} onChange={(event) => setResidentId(event.target.value)}><option value="">Sem morador atual</option>{residents.map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
+              <p className="form-hint">A troca preserva o histórico da unidade e não altera cobranças, pagamentos ou conciliações.</p>
+              <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Atualizar morador atual'}</button>
+            </form>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );

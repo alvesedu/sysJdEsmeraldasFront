@@ -6,9 +6,14 @@ import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import type { Category } from '../types/domain';
 
+type CategoryForm = { name: string; defaultCounterpartyPattern: string; active: boolean };
+
+const emptyForm: CategoryForm = { name: '', defaultCounterpartyPattern: '', active: true };
+
 export function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState({ name: '', defaultCounterpartyPattern: '' });
+  const [form, setForm] = useState<CategoryForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -37,22 +42,46 @@ export function CategoriesPage() {
     !filter || `${category.name} ${category.defaultCounterpartyPattern ?? ''}`.toLocaleLowerCase('pt-BR').includes(filter.toLocaleLowerCase('pt-BR'))
   )), [categories, filter]);
 
+  function startCreate() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+    setError('');
+    setMessage('');
+  }
+
+  function startEdit(category: Category) {
+    setEditingId(category._id);
+    setForm({
+      name: category.name,
+      defaultCounterpartyPattern: category.defaultCounterpartyPattern ?? '',
+      active: category.active
+    });
+    setShowForm(true);
+    setError('');
+    setMessage('');
+  }
+
   async function submitCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError('');
     setMessage('');
     try {
-      await api.post('/lookups/categories', {
+      const payload = {
         name: form.name,
-        defaultCounterpartyPattern: form.defaultCounterpartyPattern || null
-      });
-      setForm({ name: '', defaultCounterpartyPattern: '' });
+        defaultCounterpartyPattern: form.defaultCounterpartyPattern || null,
+        ...(editingId ? { active: form.active } : {})
+      };
+      if (editingId) await api.patch(`/lookups/categories/${editingId}`, payload);
+      else await api.post('/lookups/categories', payload);
+      setForm(emptyForm);
+      setEditingId(null);
       setShowForm(false);
-      setMessage('Categoria cadastrada.');
+      setMessage(editingId ? 'Categoria atualizada.' : 'Categoria cadastrada.');
       await loadCategories();
     } catch (caught) {
-      setError(apiErrorMessage(caught, 'Não foi possível cadastrar a categoria. Verifique se já existe uma categoria com este nome.'));
+      setError(apiErrorMessage(caught, 'Não foi possível salvar a categoria. Verifique se já existe uma categoria com este nome.'));
     } finally {
       setSubmitting(false);
     }
@@ -66,16 +95,23 @@ export function CategoriesPage() {
 
       <section className="toolbar compact-toolbar">
         <label>Buscar categoria<input value={filter} onChange={(event) => setFilter(event.target.value)} /></label>
-        <button className="primary-button toolbar-action" onClick={() => setShowForm(true)}>Nova categoria</button>
+        <button className="primary-button toolbar-action" onClick={startCreate}>Nova categoria</button>
       </section>
 
       {showForm ? (
-        <Modal title="Nova categoria" subtitle="Categorias alimentam contas a pagar e classificação de despesas." onClose={() => setShowForm(false)}>
-        <form className="form-grid compact-form" onSubmit={submitCategory}>
-          <label>Nome<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-          <label className="wide-field">Padrão de contraparte<input value={form.defaultCounterpartyPattern} onChange={(event) => setForm({ ...form, defaultCounterpartyPattern: event.target.value })} /></label>
-          <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Cadastrar categoria'}</button>
-        </form>
+        <Modal
+          title={editingId ? 'Editar categoria' : 'Nova categoria'}
+          subtitle="Categorias alimentam contas a pagar e classificação de despesas."
+          onClose={() => setShowForm(false)}
+        >
+          <form className="form-grid compact-form" onSubmit={submitCategory}>
+            <label>Nome<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+            <label className="wide-field">Padrão de contraparte<input value={form.defaultCounterpartyPattern} onChange={(event) => setForm({ ...form, defaultCounterpartyPattern: event.target.value })} /></label>
+            {editingId ? (
+              <label>Situação<select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm({ ...form, active: event.target.value === 'active' })}><option value="active">Ativa</option><option value="inactive">Inativa</option></select></label>
+            ) : null}
+            <button className="primary-button" type="submit" disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar categoria'}</button>
+          </form>
         </Modal>
       ) : null}
 
@@ -89,7 +125,7 @@ export function CategoriesPage() {
                   <td>{category.name}</td>
                   <td>{category.defaultCounterpartyPattern ?? 'Não informado'}</td>
                   <td><StatusBadge value={category.active ? 'PAID' : 'CANCELLED'} label={category.active ? 'Ativa' : 'Inativa'} /></td>
-                  <td><span className="muted-inline">Editar/desativar depende de endpoint backend.</span></td>
+                  <td><div className="row-actions"><button className="link-button" onClick={() => startEdit(category)}>Editar</button></div></td>
                 </tr>
               ))}
               {!loading && visibleCategories.length === 0 ? <tr><td colSpan={4}><EmptyState>Nenhuma categoria encontrada.</EmptyState></td></tr> : null}

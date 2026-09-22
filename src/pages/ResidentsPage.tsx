@@ -142,10 +142,17 @@ export function ResidentsPage() {
       </section>
 
       {detail ? (
-        <section className="panel operational-panel">
-          <div className="section-heading"><div><p className="eyebrow">Morador</p><h2>{detail.name}</h2><p>Unidade atual: {unitOf(detail) ? unitLabel(unitOf(detail) as Unit) : 'sem unidade'}</p></div><button className="ghost-button compact" onClick={() => setDetail(null)}>Fechar</button></div>
-          <div className="summary-grid"><div className="mini-card"><span>Telefone</span><strong>{detail.phone ?? 'Não informado'}</strong></div><div className="mini-card"><span>E-mail</span><strong>{detail.email ?? 'Não informado'}</strong></div><div className="mini-card"><span>Status</span><strong>{detail.active ? 'Ativo' : 'Inativo'}</strong></div></div>
-        </section>
+        <Modal
+          title={detail.name}
+          subtitle={`Unidade atual: ${unitOf(detail) ? unitLabel(unitOf(detail) as Unit) : 'sem unidade'}`}
+          onClose={() => setDetail(null)}
+        >
+          <div className="summary-grid">
+            <div className="mini-card"><span>Telefone</span><strong>{detail.phone ?? 'Não informado'}</strong></div>
+            <div className="mini-card"><span>E-mail</span><strong>{detail.email ?? 'Não informado'}</strong></div>
+            <div className="mini-card"><span>Status</span><strong>{detail.active ? 'Ativo' : 'Inativo'}</strong></div>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );
