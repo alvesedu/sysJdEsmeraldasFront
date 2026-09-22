@@ -1027,6 +1027,183 @@ th {
   color: #260202;
 }
 
+/* Tailwind-backed design-system pass over the legacy class API. */
+button,
+input,
+select,
+textarea {
+  @apply transition duration-200 ease-out;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  @apply outline-none ring-2 ring-amber-300/70 ring-offset-2 ring-offset-slate-950;
+}
+
+input,
+select,
+textarea {
+  @apply min-h-12 rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-sm text-slate-100 shadow-inner shadow-black/10 placeholder:text-slate-500;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  @apply border-white/20 bg-slate-950/45;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+  @apply cursor-not-allowed opacity-55;
+}
+
+label {
+  @apply text-sm font-semibold text-slate-300;
+}
+
+.primary-button,
+.ghost-button,
+.danger-button {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold shadow-lg shadow-black/10 active:scale-[0.99];
+}
+
+.primary-button {
+  @apply border border-amber-200/20 bg-gradient-to-br from-amber-300 to-orange-400 text-slate-950 shadow-amber-950/20 hover:from-amber-200 hover:to-orange-300;
+}
+
+.ghost-button {
+  @apply border border-white/10 bg-white/10 text-slate-100 hover:border-white/20 hover:bg-white/15;
+}
+
+.danger-button {
+  @apply border border-red-300/20 bg-gradient-to-br from-red-300 to-red-500 text-red-950 hover:from-red-200 hover:to-red-400;
+}
+
+.link-button {
+  @apply inline-flex min-h-9 items-center justify-center rounded-xl border border-transparent px-3 py-1.5 text-sm font-bold text-amber-200 hover:border-amber-200/20 hover:bg-amber-200/10;
+}
+
+.link-button.danger {
+  @apply text-red-200 hover:border-red-200/20 hover:bg-red-200/10;
+}
+
+.compact {
+  @apply min-h-9 rounded-xl px-3 py-1.5 text-sm;
+}
+
+.panel,
+.auth-card,
+.auth-panel,
+.stat-card,
+.mini-card {
+  @apply border-white/10 bg-white/[0.07] shadow-2xl shadow-black/20 backdrop-blur-xl;
+}
+
+.panel,
+.auth-card,
+.auth-panel {
+  @apply rounded-[1.75rem];
+}
+
+.mini-card,
+.stat-card {
+  @apply rounded-2xl;
+}
+
+.toolbar,
+.form-grid,
+.payment-form {
+  @apply rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/10 backdrop-blur-xl;
+}
+
+.table-panel {
+  @apply rounded-[1.5rem] border border-white/10 bg-white/[0.055] shadow-2xl shadow-black/20;
+}
+
+table {
+  @apply text-sm;
+}
+
+th {
+  @apply bg-slate-950/25 text-xs font-black uppercase tracking-[0.16em] text-slate-400;
+}
+
+td {
+  @apply text-slate-200;
+}
+
+tbody tr {
+  @apply transition-colors duration-150;
+}
+
+tbody tr:hover {
+  @apply bg-white/[0.045];
+}
+
+.status {
+  @apply items-center border border-white/10 px-3 py-1 text-[0.68rem] shadow-sm;
+}
+
+.alert,
+.alert.success {
+  @apply rounded-2xl border p-4 shadow-xl shadow-black/10 backdrop-blur-xl;
+}
+
+.field-error {
+  @apply text-sm font-semibold text-red-200;
+}
+
+.muted-inline,
+.empty-state,
+.loading-text,
+.form-hint {
+  @apply text-slate-400;
+}
+
+.modal-backdrop {
+  @apply bg-slate-950/75 backdrop-blur-xl;
+}
+
+.modal-panel {
+  @apply rounded-[1.75rem] border-white/10 bg-slate-950/95 shadow-2xl shadow-black/40;
+}
+
+.modal-header,
+.modal-footer {
+  @apply border-white/10 bg-white/[0.035] px-5 py-4;
+}
+
+.modal-header h2 {
+  @apply text-xl font-black tracking-tight text-white;
+}
+
+.modal-header p,
+.confirm-message {
+  @apply text-sm leading-6 text-slate-400;
+}
+
+.modal-body {
+  @apply p-5;
+}
+
+.modal-stack {
+  @apply gap-5;
+}
+
+.row-actions,
+.inline-actions {
+  @apply gap-2;
+}
+
+.password-toggle {
+  @apply text-slate-400 hover:text-white;
+}
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 1fr;
