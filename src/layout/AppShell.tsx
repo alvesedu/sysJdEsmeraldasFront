@@ -16,9 +16,16 @@ const navGroups = [
     ]
   },
   {
+    label: 'Operacional',
+    items: [
+      ['Lançamento rápido', '/quick-entry']
+    ]
+  },
+  {
     label: 'Finanças',
     items: [
       ['Cobranças', '/charges'],
+      ['Inadimplentes', '/defaulters'],
       ['Conciliação', '/reconciliation'],
       ['Despesas', '/expenses'],
       ['Contas a pagar', '/payables'],

@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { api, apiErrorMessage } from '../api/client';
-import { EmptyState, ErrorState, LoadingState, SuccessState } from '../components/Feedback';
 import { Modal } from '../components/Modal';
-import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { buildResidentPayload } from '../utils/formWorkflows';
 import type { Resident, Unit } from '../types/domain';
+import { AlertCircle, CheckCircle2, Eye, Home, Pencil, Search, ShieldCheck, UserPlus, Users } from 'lucide-react';
 
 type ResidentForm = { name: string; phone: string; email: string; unitId: string; active: boolean };
 const emptyForm: ResidentForm = { name: '', phone: '', email: '', unitId: '', active: true };
+const fieldClass = 'mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/55 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20';
+const labelClass = 'text-sm font-semibold text-slate-300';
+const primaryActionClass = 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-300 to-orange-400 px-5 text-sm font-black text-slate-950 shadow-lg shadow-amber-950/20 transition hover:scale-[1.01] hover:shadow-amber-500/20 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100';
+const iconActionClass = 'inline-grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-200 transition hover:border-amber-300/40 hover:bg-amber-300/10 hover:text-amber-100';
 
 export function ResidentsPage() {
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -42,11 +48,11 @@ export function ResidentsPage() {
   }
 
   const visibleResidents = useMemo(() => residents.filter((resident) => {
-    const unit = unitOf(resident);
+    const residentUnits = unitsOfResident(resident, units);
     const matchesName = !filters.name || resident.name.toLocaleLowerCase('pt-BR').includes(filters.name.toLocaleLowerCase('pt-BR'));
-    const matchesUnit = !filters.unitId || unit?._id === filters.unitId;
+    const matchesUnit = !filters.unitId || residentUnits.some((unit) => unit._id === filters.unitId);
     return matchesName && matchesUnit;
-  }), [filters, residents]);
+  }), [filters, residents, units]);
 
   function startCreate() {
     setEditingId(null);
@@ -57,7 +63,7 @@ export function ResidentsPage() {
   }
 
   function startEdit(resident: Resident) {
-    const unit = unitOf(resident);
+    const [unit] = unitsOfResident(resident, units);
     setEditingId(resident._id);
     setForm({
       name: resident.name,
@@ -78,11 +84,10 @@ export function ResidentsPage() {
     setMessage('');
     const payload = buildResidentPayload(form);
     try {
-      const { data } = editingId
-        ? await api.put(`/residents/${editingId}`, payload)
-        : await api.post('/residents', payload);
+      if (editingId) await api.put(`/residents/${editingId}`, payload);
+      else await api.post('/residents', payload);
       setShowForm(false);
-      setDetail(data.item);
+      setDetail(null);
       setMessage(editingId ? 'Morador atualizado.' : 'Morador cadastrado.');
       await refresh();
     } catch (caught) {
@@ -93,16 +98,59 @@ export function ResidentsPage() {
   }
 
   return (
-    <div className="page">
-      <PageHeader title="Moradores" subtitle="Cadastro do ocupante atual sem acoplar situação financeira." />
-      {error ? <ErrorState>{error}</ErrorState> : null}
-      {message ? <SuccessState>{message}</SuccessState> : null}
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(247,185,85,0.16),_transparent_34%),linear-gradient(135deg,_#07111f_0%,_#0f172a_54%,_#0b1324_100%)] p-4 text-slate-100 sm:p-6 lg:p-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <div className="grid gap-6 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
+            <div className="flex flex-col justify-between gap-8">
+              <div className="space-y-4">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-amber-200">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Cadastro operacional
+                </span>
+                <div className="max-w-3xl space-y-3">
+                  <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">Moradores</h1>
+                  <p className="text-base leading-7 text-slate-300 sm:text-lg">Gerencie dados cadastrais sem acoplar situação financeira. Vínculos com unidades continuam controlados pela tela de Unidades.</p>
+                </div>
+              </div>
 
-      <section className="toolbar compact-toolbar">
-        <label>Nome<input value={filters.name} onChange={(event) => setFilters({ ...filters, name: event.target.value })} /></label>
-        <label>Unidade<select value={filters.unitId} onChange={(event) => setFilters({ ...filters, unitId: event.target.value })}><option value="">Todas</option>{units.map((unit) => <option key={unit._id} value={unit._id}>{unitLabel(unit)}</option>)}</select></label>
-        <button className="primary-button toolbar-action" onClick={startCreate}>Novo morador</button>
-      </section>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <ResidentMetric icon={Users} label="Moradores" value={`${residents.length}`} hint="Cadastros totais" />
+                <ResidentMetric icon={CheckCircle2} label="Ativos" value={`${residents.filter((resident) => resident.active).length}`} hint="Em operação" />
+                <ResidentMetric icon={Home} label="Com unidade" value={`${residents.filter((resident) => unitsOfResident(resident, units).length > 0).length}`} hint="Vínculo atual" />
+              </div>
+            </div>
+
+            <Card className="border-white/10 bg-slate-950/45 text-white shadow-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-white">
+                  <Search className="h-4 w-4 text-amber-300" />
+                  Filtros e ações
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={labelClass}>Nome<input className={fieldClass} value={filters.name} onChange={(event) => setFilters({ ...filters, name: event.target.value })} placeholder="Buscar morador" /></label>
+                  <label className={labelClass}>Unidade<select className={fieldClass} value={filters.unitId} onChange={(event) => setFilters({ ...filters, unitId: event.target.value })}><option value="">Todas</option>{units.map((unit) => <option key={unit._id} value={unit._id}>{unitLabel(unit)}</option>)}</select></label>
+                </div>
+                <button className={primaryActionClass} onClick={startCreate} type="button"><UserPlus className="h-4 w-4" />Novo morador</button>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {error ? (
+          <Alert variant="destructive" className="border-red-400/30 bg-red-950/50 text-red-100">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert className="border-emerald-300/25 bg-emerald-400/10 text-emerald-100">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        ) : null}
 
       {showForm ? (
         <Modal title={editingId ? 'Editar morador' : 'Novo morador'} subtitle="Dados cadastrais do morador. O vínculo com unidade é alterado pela tela de Unidades." onClose={() => setShowForm(false)}>
@@ -117,34 +165,55 @@ export function ResidentsPage() {
         </Modal>
       ) : null}
 
-      <section className="panel table-panel">
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Morador</th><th>Unidade atual</th><th>Contato</th><th>Situação</th><th>Ações</th></tr></thead>
-            <tbody>
-              {visibleResidents.map((resident) => {
-                const unit = unitOf(resident);
-                return (
-                  <tr key={resident._id}>
-                    <td>{resident.name}</td>
-                    <td>{unit ? unitLabel(unit) : 'Sem unidade'}</td>
-                    <td>{[resident.phone, resident.email].filter(Boolean).join(' · ') || 'Não informado'}</td>
-                    <td><StatusBadge value={resident.active ? 'PAID' : 'CANCELLED'} label={resident.active ? 'Ativo' : 'Inativo'} /></td>
-                    <td><div className="row-actions"><button className="link-button" onClick={() => setDetail(resident)}>Detalhes</button><button className="link-button" onClick={() => startEdit(resident)}>Editar</button></div></td>
-                  </tr>
-                );
-              })}
-              {!loading && visibleResidents.length === 0 ? <tr><td colSpan={5}><EmptyState>Nenhum morador encontrado.</EmptyState></td></tr> : null}
-            </tbody>
-          </table>
-        </div>
-        {loading ? <LoadingState>Carregando moradores...</LoadingState> : null}
-      </section>
+        <Card className="border-white/10 bg-white/[0.06] text-white shadow-xl shadow-black/10 backdrop-blur-xl">
+          <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Lista cadastral</p>
+              <CardTitle className="mt-2 text-xl text-white">Moradores encontrados</CardTitle>
+            </div>
+            <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-sm font-black text-amber-100">{visibleResidents.length}</span>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <Skeleton className="h-16 rounded-2xl bg-white/10" key={index} />)}</div>
+            ) : (
+              <div className="overflow-hidden rounded-3xl border border-white/10">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[860px] w-full border-collapse text-left">
+                    <thead className="bg-slate-950/55 text-xs uppercase tracking-[0.18em] text-slate-400">
+                      <tr><th className="px-4 py-4">Morador</th><th className="px-4 py-4">Unidade atual</th><th className="px-4 py-4">Contato</th><th className="px-4 py-4">Situação</th><th className="px-4 py-4 text-right">Ações</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                      {visibleResidents.map((resident) => {
+                        const residentUnits = unitsOfResident(resident, units);
+                        return (
+                          <tr className="bg-white/[0.025] transition hover:bg-amber-300/5" key={resident._id}>
+                            <td className="px-4 py-4 font-bold text-white">{resident.name}</td>
+                            <td className="px-4 py-4 text-slate-300">{residentUnits.length > 0 ? residentUnits.map(unitLabel).join(' · ') : 'Sem unidade'}</td>
+                            <td className="px-4 py-4 text-slate-300">{[resident.phone, resident.email].filter(Boolean).join(' · ') || 'Não informado'}</td>
+                            <td className="px-4 py-4"><StatusBadge value={resident.active ? 'PAID' : 'CANCELLED'} label={resident.active ? 'Ativo' : 'Inativo'} /></td>
+                            <td className="px-4 py-4">
+                              <div className="flex justify-end gap-2">
+                                <button className={iconActionClass} type="button" aria-label={`Abrir detalhes do morador ${resident.name}`} title="Detalhes" onClick={() => setDetail(resident)}><Eye size={16} /></button>
+                                <button className={iconActionClass} type="button" aria-label={`Editar morador ${resident.name}`} title="Editar" onClick={() => startEdit(resident)}><Pencil size={16} /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {visibleResidents.length === 0 ? <div className="p-8 text-center text-slate-300">Nenhum morador encontrado.</div> : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
       {detail ? (
         <Modal
           title={detail.name}
-          subtitle={`Unidade atual: ${unitOf(detail) ? unitLabel(unitOf(detail) as Unit) : 'sem unidade'}`}
+          subtitle={`Unidades vinculadas: ${unitsOfResident(detail, units).length > 0 ? unitsOfResident(detail, units).map(unitLabel).join(' · ') : 'sem unidade'}`}
           onClose={() => setDetail(null)}
         >
           <div className="summary-grid">
@@ -154,12 +223,37 @@ export function ResidentsPage() {
           </div>
         </Modal>
       ) : null}
+      </div>
     </div>
   );
 }
 
-function unitOf(resident: Resident) {
-  return resident.unitId && typeof resident.unitId !== 'string' ? resident.unitId : null;
+type ResidentMetricProps = {
+  icon: typeof Users;
+  label: string;
+  value: string;
+  hint: string;
+};
+
+function ResidentMetric({ icon: Icon, label, value, hint }: ResidentMetricProps) {
+  return (
+    <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-amber-100">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] opacity-75">{label}</p>
+        <Icon className="h-4 w-4 text-amber-200" />
+      </div>
+      <strong className="mt-2 block truncate text-2xl font-black text-white">{value}</strong>
+      <span className="mt-1 block text-sm text-slate-300">{hint}</span>
+    </div>
+  );
+}
+
+function unitsOfResident(resident: Resident, units: Unit[]) {
+  return units.filter((unit) => residentIdOfUnit(unit) === resident._id);
+}
+
+function residentIdOfUnit(unit: Unit) {
+  return typeof unit.residentCurrentId === 'object' && unit.residentCurrentId?._id ? unit.residentCurrentId._id : '';
 }
 
 function unitLabel(unit: Unit) {

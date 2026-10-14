@@ -22,5 +22,5 @@ export function reaisInputToCents(value: string) {
 }
 
 export function centsToReaisInput(value: number) {
-  return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, '0')}`;
+  return `${Math.floor(value / 100)},${String(value % 100).padStart(2, '0')}`;
 }

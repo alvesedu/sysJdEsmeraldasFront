@@ -14,6 +14,11 @@ type PayableFormInput = {
   notes: string;
 };
 type PaymentFormInput = { amount: string; paymentDate: string; notes: string };
+type ChargePaymentFormInput = PaymentFormInput & {
+  paymentMethod: 'PIX' | 'CASH' | 'BANK_TRANSFER' | 'BOLETO' | 'OTHER';
+  quickEntryRunId?: string;
+  quickEntryLineNumber?: number;
+};
 type AllocationInput = { chargeId: string; amountText: string };
 type ExpenseFormInput = {
   bankTransactionId: string;
@@ -31,7 +36,7 @@ export function buildUnitPayload(input: UnitFormInput, existingUnits: Unit[], ed
   if (editingId) return { status: input.status };
 
   const payload = {
-    quadra: required(input.quadra, 'Quadra'),
+    quadra: required(input.quadra, 'Quadra').toLocaleUpperCase('pt-BR'),
     numero: required(input.numero, 'Número'),
     tipo: input.tipo,
     status: input.status
@@ -39,10 +44,9 @@ export function buildUnitPayload(input: UnitFormInput, existingUnits: Unit[], ed
   const duplicate = existingUnits.some((unit) => (
     unit._id !== editingId &&
     unit.quadra.trim().toLocaleUpperCase('pt-BR') === payload.quadra.toLocaleUpperCase('pt-BR') &&
-    unit.numero.trim().toLocaleUpperCase('pt-BR') === payload.numero.toLocaleUpperCase('pt-BR') &&
-    unit.tipo === payload.tipo
+    unit.numero.trim().toLocaleUpperCase('pt-BR') === payload.numero.toLocaleUpperCase('pt-BR')
   ));
-  if (duplicate) throw new Error('Já existe unidade com esta quadra, número e tipo.');
+  if (duplicate) throw new Error('Já existe unidade com esta quadra e número.');
   return payload;
 }
 
@@ -79,6 +83,18 @@ export function buildManualPaymentPayload(input: PaymentFormInput) {
     amount: reaisInputToCents(input.amount),
     paymentDate: input.paymentDate,
     notes: optional(input.notes)
+  };
+}
+
+export function buildManualChargePaymentPayload(input: ChargePaymentFormInput) {
+  if (!['PIX', 'CASH', 'BANK_TRANSFER', 'BOLETO', 'OTHER'].includes(input.paymentMethod)) {
+    throw new Error('Informe a forma de pagamento.');
+  }
+  return {
+    ...buildManualPaymentPayload(input),
+    paymentMethod: input.paymentMethod,
+    ...(input.quickEntryRunId ? { quickEntryRunId: input.quickEntryRunId } : {}),
+    ...(input.quickEntryLineNumber ? { quickEntryLineNumber: input.quickEntryLineNumber } : {})
   };
 }
 

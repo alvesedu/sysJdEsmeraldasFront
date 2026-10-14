@@ -689,10 +689,11 @@ th {
 }
 
 .credit-inbox {
-  padding: 1rem;
-  max-height: calc(100vh - 250px);
+  padding: 0.85rem;
+  max-height: min(680px, calc(100vh - 250px));
   position: sticky;
   top: 1rem;
+  overflow: hidden;
 }
 
 .credit-inbox h2,
@@ -717,17 +718,36 @@ th {
 
 .credit-list {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.35rem;
+  align-content: start;
+  max-height: min(590px, calc(100vh - 340px));
   overflow-y: auto;
+  padding-right: 0.25rem;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(247, 185, 85, 0.5) transparent;
+}
+
+.credit-list::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.credit-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(247, 185, 85, 0.45);
 }
 
 .credit-item {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.65rem;
-  padding: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main money"
+    "status money";
+  gap: 0.25rem 0.75rem;
+  min-height: 64px;
+  padding: 0.65rem 0.75rem;
   border: 1px solid transparent;
-  border-radius: 16px;
+  border-radius: 13px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
   text-align: left;
@@ -740,17 +760,28 @@ th {
   background: rgba(247, 185, 85, 0.08);
 }
 
-.credit-item-top,
+.credit-item-main,
 .credit-item-money {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.12rem;
 }
 
-.credit-item-top strong {
-  max-width: 28ch;
+.credit-item-main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.credit-item-money {
+  grid-area: money;
+  justify-items: end;
+  align-content: start;
+}
+
+.credit-item-main strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .credit-item small,
@@ -763,7 +794,11 @@ th {
 }
 
 .credit-item .status {
+  grid-area: status;
   justify-self: start;
+  max-width: 100%;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.66rem;
 }
 
 .status-unmatched { background: rgba(247, 185, 85, 0.18); color: #ffd58e; }

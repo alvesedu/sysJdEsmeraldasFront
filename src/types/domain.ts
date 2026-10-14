@@ -101,3 +101,44 @@ export type MonthlyClosing = {
   availableBalance: number;
   notes: string | null;
 };
+
+export type QuickEntryRunItem = {
+  lineNumber: number;
+  rawText: string;
+  sequence: string | null;
+  payerName: string;
+  paid: boolean;
+  amountCents: number | null;
+  amountText: string | null;
+  periodHints: string[];
+  notes: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  suggestedResidentId?: string | Resident | null;
+  suggestedUnitId?: string | Unit | null;
+  suggestionConfidence?: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+  suggestionReason?: string | null;
+  confirmedChargeId?: string | Charge | null;
+  confirmedPaymentAllocationId?: string | null;
+  confirmedAt?: string | null;
+};
+
+export type QuickEntryRunTotals = {
+  lines: number;
+  paid: number;
+  unpaid: number;
+  withAmount: number;
+  withoutAmount: number;
+  amountCents: number;
+};
+
+export type QuickEntryRun = {
+  _id: string;
+  label: string;
+  rawText?: string;
+  items?: QuickEntryRunItem[];
+  totals: QuickEntryRunTotals;
+  createdBy?: { _id: string; name?: string; email?: string } | string;
+  createdAt: string;
+  updatedAt?: string;
+  archivedAt?: string | null;
+};

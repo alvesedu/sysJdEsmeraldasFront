@@ -6,6 +6,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { UnitsPage } from './pages/UnitsPage';
 import { ResidentsPage } from './pages/ResidentsPage';
 import { ChargesPage } from './pages/ChargesPage';
+import { DefaultersPage } from './pages/DefaultersPage';
+import { QuickEntryPage } from './pages/QuickEntryPage';
 import { ImportsPage } from './pages/ImportsPage';
 import { ReconciliationPage } from './pages/ReconciliationPage';
 import { ExpensesPage } from './pages/ExpensesPage';
@@ -34,7 +36,9 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/units" element={<UnitsPage />} />
         <Route path="/residents" element={<ResidentsPage />} />
+        <Route path="/quick-entry" element={<QuickEntryPage />} />
         <Route path="/charges" element={<ChargesPage />} />
+        <Route path="/defaulters" element={<DefaultersPage />} />
         <Route path="/imports" element={<ImportsPage />} />
         <Route path="/reconciliation" element={<ReconciliationPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />

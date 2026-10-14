@@ -5,12 +5,14 @@ import {
   buildCreditAllocationPayload,
   buildExpensePayload,
   buildGenerateChargesPayload,
+  buildManualChargePaymentPayload,
   buildManualPaymentPayload,
   buildMonthlyClosingPayload,
   buildPayablePayload,
   buildResidentPayload,
   buildUnitPayload
 } from './formWorkflows';
+import { centsToReaisInput } from './money';
 import type { Unit } from '../types/domain';
 
 const unit: Unit = {
@@ -24,14 +26,15 @@ const unit: Unit = {
 };
 
 describe('frontend operational form workflows', () => {
-  it('builds unit creation payload and blocks duplicate quadra, numero and tipo', () => {
-    assert.deepEqual(buildUnitPayload({ quadra: ' B ', numero: ' 12 ', tipo: 'LOTE', status: 'ATIVA' }, [unit]), {
+  it('builds unit creation payload and blocks duplicate quadra and numero even with a different type', () => {
+    assert.deepEqual(buildUnitPayload({ quadra: ' b ', numero: ' 12 ', tipo: 'LOTE', status: 'ATIVA' }, [unit]), {
       quadra: 'B',
       numero: '12',
       tipo: 'LOTE',
       status: 'ATIVA'
     });
     assert.throws(() => buildUnitPayload({ quadra: 'a', numero: '10', tipo: 'CASA', status: 'ATIVA' }, [unit]), /Já existe unidade/);
+    assert.throws(() => buildUnitPayload({ quadra: 'a', numero: '10', tipo: 'LOTE', status: 'ATIVA' }, [unit]), /Já existe unidade/);
   });
 
   it('builds unit update payload without patrimonial identity fields', () => {
@@ -74,6 +77,21 @@ describe('frontend operational form workflows', () => {
       amount: 181_050,
       paymentDate: '2026-09-12',
       notes: 'Pix'
+    });
+  });
+
+  it('builds manual monthly fee payment payload in cents', () => {
+    assert.equal(centsToReaisInput(25_000), '250,00');
+    assert.deepEqual(buildManualChargePaymentPayload({
+      amount: centsToReaisInput(25_000),
+      paymentDate: '2026-09-05',
+      paymentMethod: 'PIX',
+      notes: 'Pagamento antecipado'
+    }), {
+      amount: 25_000,
+      paymentDate: '2026-09-05',
+      paymentMethod: 'PIX',
+      notes: 'Pagamento antecipado'
     });
   });
 

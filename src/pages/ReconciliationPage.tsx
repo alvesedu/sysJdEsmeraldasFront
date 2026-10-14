@@ -3,7 +3,11 @@ import { api, apiErrorMessage } from '../api/client';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
 import { MoneyInput } from '../components/MoneyInput';
-import { PageHeader } from '../components/PageHeader';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { AlertCircle, ArrowRight, BadgeCheck, Banknote, CalendarDays, CheckCircle2, Filter, Landmark, ListChecks, Receipt, RotateCcw, Search, ShieldCheck, Sparkles, WalletCards } from 'lucide-react';
 import { currentCompetence, formatCompetence } from '../utils/competence';
 import { buildCreditAllocationPayload } from '../utils/formWorkflows';
 import { formatCents, reaisInputToCents } from '../utils/money';
@@ -47,18 +51,28 @@ type Allocation = {
   reversalReason: string | null;
   chargeId: Charge;
 };
+type ManualPaymentCandidate = Allocation & {
+  source: 'MANUAL';
+  unitId: Unit;
+  createdBy?: { name?: string } | string;
+};
 type Detail = {
   transaction: Credit;
   suggestedUnit: Unit | null;
   suggestionReason: 'BANK_ALIAS' | null;
   openCharges: Charge[];
   allocations: Allocation[];
+  manualPaymentCandidates: ManualPaymentCandidate[];
   allocatedAmount: number;
   remainingAmount: number;
 };
 type BankImport = { _id: string; originalFileName: string };
 
 const initialFilters = { competence: '', status: 'UNMATCHED', counterparty: '', importId: '' };
+const fieldClass = 'mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/55 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20';
+const labelClass = 'text-sm font-semibold text-slate-300';
+const primaryActionClass = 'inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-300 to-orange-400 px-5 text-sm font-black text-slate-950 shadow-lg shadow-amber-950/20 transition hover:scale-[1.01] hover:shadow-amber-500/20 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:scale-100';
+const ghostActionClass = 'inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-bold text-slate-200 transition hover:border-amber-300/35 hover:bg-amber-300/10';
 
 export function ReconciliationPage() {
   const [credits, setCredits] = useState<Credit[]>([]);
@@ -77,6 +91,7 @@ export function ReconciliationPage() {
   const [saveAlias, setSaveAlias] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [linkingAllocationId, setLinkingAllocationId] = useState<string | null>(null);
   const [generatingCharges, setGeneratingCharges] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [allocationToReverse, setAllocationToReverse] = useState<Allocation | null>(null);
@@ -169,7 +184,7 @@ export function ReconciliationPage() {
   async function chooseResident(residentId: string) {
     setSelectedResidentId(residentId);
     const resident = residents.find((item) => item._id === residentId);
-    const unit = unitOfResident(resident);
+    const [unit] = resident ? unitsOfResident(resident, units) : [];
     if (!unit) {
       setSelectedUnit(null);
       setUnitSearch('');
@@ -248,6 +263,22 @@ export function ReconciliationPage() {
     }
   }
 
+  async function linkManualPayment(candidate: ManualPaymentCandidate) {
+    if (!detail) return;
+    setLinkingAllocationId(candidate._id);
+    setError('');
+    setMessage('');
+    try {
+      await api.post(`/bank-transactions/${detail.transaction._id}/link-manual-payment`, { allocationId: candidate._id });
+      setMessage('Baixa manual conferida e vinculada ao crédito bancário sem duplicar o pagamento.');
+      await loadCredits(detail.transaction._id);
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'Não foi possível vincular a baixa manual.'));
+    } finally {
+      setLinkingAllocationId(null);
+    }
+  }
+
   const normalizedSearch = unitSearch.trim().toLocaleLowerCase('pt-BR');
   const matchingUnits = normalizedSearch && (!selectedUnit || unitSearch !== unitLabel(selectedUnit))
     ? units.filter((unit) => unitSearchText(unit).includes(normalizedSearch)).slice(0, 8)
@@ -256,84 +287,254 @@ export function ReconciliationPage() {
   const projectedRemaining = Math.max((detail?.remainingAmount ?? 0) - enteredTotal, 0);
 
   return (
-    <div className="page reconciliation-page">
-      <PageHeader title="Conciliação de entradas" subtitle="Transforme créditos bancários em pagamentos confirmados por unidade e competência." />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(247,185,85,0.16),_transparent_34%),linear-gradient(135deg,_#07111f_0%,_#0f172a_54%,_#0b1324_100%)] p-4 text-slate-100 sm:p-6 lg:p-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <div className="grid gap-6 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
+            <div className="flex flex-col justify-between gap-8">
+              <div className="space-y-4">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-amber-200">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Conciliação bancária
+                </span>
+                <div className="max-w-3xl space-y-3">
+                  <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+                    Transforme entradas em pagamentos confirmados.
+                  </h1>
+                  <p className="text-base leading-7 text-slate-300 sm:text-lg">
+                    Revise créditos importados, selecione morador, competência e unidade, e distribua o valor com segurança entre as cobranças abertas.
+                  </p>
+                </div>
+              </div>
 
-      <section className="panel reconciliation-filters">
-        <label>Competência<input type="month" value={filters.competence} onChange={(event) => setFilters({ ...filters, competence: event.target.value })} /></label>
-        <label>Status<select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}><option value="">Todos</option><option value="UNMATCHED">Não conciliado</option><option value="PARTIALLY_MATCHED">Parcial</option><option value="MATCHED">Conciliado</option></select></label>
-        <label>Nome bancário<input placeholder="Buscar pagador" value={filters.counterparty} onChange={(event) => setFilters({ ...filters, counterparty: event.target.value })} /></label>
-        <label>Importação<select value={filters.importId} onChange={(event) => setFilters({ ...filters, importId: event.target.value })}><option value="">Todas</option>{imports.map((item) => <option key={item._id} value={item._id}>{item.originalFileName}</option>)}</select></label>
-        <button className="primary-button" onClick={() => { setLoading(true); setError(''); setAppliedFilters(filters); }}>Filtrar</button>
-      </section>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <ReconciliationMetric icon={Landmark} label="Créditos na fila" value={`${credits.length}`} hint="Itens filtrados" />
+                <ReconciliationMetric icon={WalletCards} label="Selecionado" value={detail ? formatCents(detail.transaction.amount) : 'R$ 0,00'} hint="Valor recebido" />
+                <ReconciliationMetric icon={Receipt} label="Alocado agora" value={formatCents(enteredTotal)} hint="Distribuição atual" />
+              </div>
+            </div>
 
-      {error ? <div className="alert">{error}</div> : null}
-      {message ? <div className="alert success">{message}</div> : null}
-
-      <div className="reconciliation-workspace">
-        <section className="panel credit-inbox">
-          <div className="section-heading"><div><p className="eyebrow">Caixa de entrada</p><h2>Créditos bancários</h2></div><span className="count-pill">{credits.length}</span></div>
-          <div className="credit-list">
-            {credits.map((credit) => (
-              <button key={credit._id} className={`credit-item ${detail?.transaction._id === credit._id ? 'selected' : ''}`} onClick={() => openCredit(credit._id)}>
-                <span className="credit-item-top"><strong>{credit.counterpartyOriginalName || credit.description}</strong><small>{formatDate(credit.operationDate ?? credit.postingDate)}</small></span>
-                <span className="credit-item-money"><strong>{formatCents(credit.amount)}</strong><small>{formatCents(credit.remainingAmount)} restante</small></span>
-                <span className={`status status-${credit.status.toLowerCase()}`}>{statusLabel(credit.status)}</span>
-              </button>
-            ))}
-            {!loading && credits.length === 0 ? <p className="empty-state">Nenhum crédito encontrado para estes filtros.</p> : null}
-            {loading ? <p className="loading-text">Carregando créditos...</p> : null}
+            <Card className="border-white/10 bg-slate-950/45 text-white shadow-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-white">
+                  <Filter className="h-4 w-4 text-amber-300" />
+                  Filtros operacionais
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={labelClass}>Competência<input className={fieldClass} type="month" value={filters.competence} onChange={(event) => setFilters({ ...filters, competence: event.target.value })} /></label>
+                  <label className={labelClass}>Status<select className={fieldClass} value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}><option value="">Todos</option><option value="UNMATCHED">Não conciliado</option><option value="PARTIALLY_MATCHED">Parcial</option><option value="MATCHED">Conciliado</option></select></label>
+                  <label className={labelClass}>Nome bancário<input className={fieldClass} placeholder="Buscar pagador" value={filters.counterparty} onChange={(event) => setFilters({ ...filters, counterparty: event.target.value })} /></label>
+                  <label className={labelClass}>Importação<select className={fieldClass} value={filters.importId} onChange={(event) => setFilters({ ...filters, importId: event.target.value })}><option value="">Todas</option>{imports.map((item) => <option key={item._id} value={item._id}>{item.originalFileName}</option>)}</select></label>
+                </div>
+                <button className={primaryActionClass} onClick={() => { setLoading(true); setError(''); setAppliedFilters(filters); }} type="button">
+                  <Search className="h-4 w-4" />
+                  Filtrar créditos
+                </button>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
-        <section className="panel reconciliation-detail">
-          {!detail ? <div className="reconciliation-empty"><span>01</span><h2>Selecione um crédito</h2><p>Confira a evidência bancária e escolha como distribuir o valor entre as cobranças.</p></div> : (
-            <>
-              <div className="transaction-strip">
-                <div><p className="eyebrow">Transação</p><h2>{detail.transaction.counterpartyOriginalName || detail.transaction.description}</h2><p>{formatDate(detail.transaction.operationDate ?? detail.transaction.postingDate)} · {typeLabel(detail.transaction.transactionType)}</p></div>
-                <div className="transaction-amount"><span>Valor recebido</span><strong>{formatCents(detail.transaction.amount)}</strong></div>
+        {error ? (
+          <Alert variant="destructive" className="border-red-400/30 bg-red-950/50 text-red-100">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert className="border-emerald-300/25 bg-emerald-400/10 text-emerald-100">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+          <Card className="border-white/10 bg-white/[0.06] text-white shadow-xl shadow-black/10 backdrop-blur-xl xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-hidden">
+            <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Caixa de entrada</p>
+                <CardTitle className="mt-2 flex items-center gap-2 text-xl text-white">
+                  <Banknote className="h-5 w-5 text-amber-300" />
+                  Créditos bancários
+                </CardTitle>
               </div>
-
-              {detail.suggestedUnit ? <div className="alias-suggestion"><strong>Sugestão baseada em pagamento anterior</strong><span>{unitLabel(detail.suggestedUnit)}</span></div> : null}
-
-              <div className="unit-picker">
-                <label>Morador<select value={selectedResidentId} onChange={(event) => { void chooseResident(event.target.value); }}><option value="">Selecione o morador</option>{residentsWithUnit(residents).map((resident) => <option key={resident._id} value={resident._id}>{residentLabel(resident)}</option>)}</select></label>
-                <label>Mês do pagamento<select value={paymentCompetence} onChange={(event) => { void changePaymentCompetence(event.target.value); }}>{paymentCompetenceOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-                <label>Unidade ou morador<input placeholder="Quadra, número ou nome do morador" value={unitSearch} onChange={(event) => { setUnitSearch(event.target.value); setSelectedUnit(null); setSelectedResidentId(''); }} /></label>
-                {matchingUnits.length > 0 ? <div className="unit-results">{matchingUnits.map((unit) => <button key={unit._id} onClick={() => chooseUnit(unit)}><strong>{unitLabel(unit)}</strong><span>{unit.residentCurrentId?.name || 'Sem morador atual'}</span></button>)}</div> : null}
+              <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-sm font-black text-amber-100">{credits.length}</span>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[min(620px,calc(100vh-15rem))] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(247,185,85,.5)_transparent] [scrollbar-width:thin]" role="list" aria-label="Créditos bancários para conciliação">
+                {loading ? Array.from({ length: 6 }).map((_, index) => <Skeleton className="h-20 rounded-2xl bg-white/10" key={index} />) : null}
+                {!loading && credits.map((credit, index) => (
+                  <button
+                    key={`${credit._id}-${index}`}
+                    className={cn(
+                      'group grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-2xl border border-white/10 bg-slate-950/35 p-3 text-left transition hover:border-amber-300/35 hover:bg-amber-300/10',
+                      detail?.transaction._id === credit._id && 'border-amber-300/60 bg-amber-300/15 shadow-lg shadow-amber-950/20'
+                    )}
+                    onClick={() => openCredit(credit._id)}
+                    title={credit.counterpartyOriginalName || credit.description}
+                    type="button"
+                  >
+                    <span className="min-w-0">
+                      <strong className="block truncate text-sm font-black text-white">{credit.counterpartyOriginalName || credit.description}</strong>
+                      <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {formatDate(credit.operationDate ?? credit.postingDate)}
+                        <StatusPill status={credit.status} />
+                      </span>
+                    </span>
+                    <span className="grid justify-items-end gap-1">
+                      <strong className="text-sm font-black text-emerald-100">{formatCents(credit.amount)}</strong>
+                      <small className="text-xs text-slate-400">{formatCents(credit.remainingAmount)} restante</small>
+                    </span>
+                  </button>
+                ))}
+                {!loading && credits.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] p-8 text-center">
+                    <Sparkles className="mx-auto h-8 w-8 text-amber-200" />
+                    <p className="mt-3 text-sm font-semibold text-slate-200">Nenhum crédito encontrado para estes filtros.</p>
+                  </div>
+                ) : null}
               </div>
+            </CardContent>
+          </Card>
 
-              {selectedUnit ? (
-                <div className="charge-allocation">
-                  <div className="section-heading"><div><p className="eyebrow">Cobrança do mês</p><h3>{formatCompetence(paymentCompetence)} · {unitLabel(selectedUnit)}</h3><p>{selectedUnit.residentCurrentId?.name || 'Sem morador atual'}</p></div></div>
-                  <div className="charge-list">
-                    {charges.map((charge) => (
-                      <div className="charge-row" key={charge._id}>
-                        <div><strong>{competenceLabel(charge.competence)}</strong><span>{formatCents(charge.outstandingAmount)} pendente</span></div>
-                        <label>Alocar (R$)<MoneyInput placeholder="0,00" value={amounts[charge._id] ?? ''} onChange={(value) => setAmounts({ ...amounts, [charge._id]: value })} /></label>
-                      </div>
-                    ))}
-                    {charges.length === 0 ? (
-                      <div className="empty-state reconciliation-empty-charge">
-                        <p>Esta unidade não possui cobrança aberta para {formatCompetence(paymentCompetence)}.</p>
-                        <button className="primary-button" type="button" disabled={generatingCharges} onClick={() => void generateChargesForPaymentCompetence()}>
-                          {generatingCharges ? 'Gerando...' : 'Gerar cobrança deste mês'}
-                        </button>
+          <Card className="min-h-[620px] border-white/10 bg-white/[0.06] text-white shadow-xl shadow-black/10 backdrop-blur-xl">
+            <CardContent className="p-5 lg:p-6">
+              {!detail ? (
+                <div className="flex min-h-[560px] items-center justify-center">
+                  <div className="max-w-md text-center">
+                    <span className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-amber-300/35 bg-amber-300/10 text-xl font-black text-amber-200">01</span>
+                    <h2 className="mt-5 text-2xl font-black text-white">Selecione um crédito</h2>
+                    <p className="mt-2 leading-7 text-slate-300">Confira a evidência bancária e escolha como distribuir o valor entre as cobranças.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <section className="flex flex-col justify-between gap-4 rounded-3xl border border-white/10 bg-slate-950/35 p-5 lg:flex-row lg:items-start">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Transação</p>
+                      <h2 className="mt-2 truncate text-2xl font-black text-white">{detail.transaction.counterpartyOriginalName || detail.transaction.description}</h2>
+                      <p className="mt-2 text-sm text-slate-400">{formatDate(detail.transaction.operationDate ?? detail.transaction.postingDate)} · {typeLabel(detail.transaction.transactionType)}</p>
+                    </div>
+                    <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-left lg:text-right">
+                      <span className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Valor recebido</span>
+                      <strong className="mt-1 block text-3xl font-black text-white">{formatCents(detail.transaction.amount)}</strong>
+                    </div>
+                  </section>
+
+                  {detail.suggestedUnit ? (
+                    <div className="flex flex-col justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-emerald-100 sm:flex-row sm:items-center">
+                      <span className="inline-flex items-center gap-2 font-bold"><BadgeCheck className="h-4 w-4" /> Sugestão baseada em pagamento anterior</span>
+                      <span className="text-sm text-emerald-50">{unitLabel(detail.suggestedUnit)}</span>
+                    </div>
+                  ) : null}
+
+                  <section className="relative grid gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-4 lg:grid-cols-3">
+                    <label className={labelClass}>Morador<select className={fieldClass} value={selectedResidentId} onChange={(event) => { void chooseResident(event.target.value); }}><option value="">Selecione o morador</option>{residentsWithUnit(residents, units).map((resident, index) => <option key={`${resident._id}-${index}`} value={resident._id}>{residentLabel(resident, units)}</option>)}</select></label>
+                    <label className={labelClass}>Mês do pagamento<select className={fieldClass} value={paymentCompetence} onChange={(event) => { void changePaymentCompetence(event.target.value); }}>{paymentCompetenceOptions().map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                    <label className={cn(labelClass, 'relative')}>Unidade ou morador<input className={fieldClass} placeholder="Quadra, número ou nome do morador" value={unitSearch} onChange={(event) => { setUnitSearch(event.target.value); setSelectedUnit(null); setSelectedResidentId(''); }} /></label>
+                    {matchingUnits.length > 0 ? (
+                      <div className="absolute left-4 right-4 top-[calc(100%-0.35rem)] z-20 grid rounded-2xl border border-white/10 bg-slate-950 p-2 shadow-2xl shadow-black/40 lg:left-auto lg:w-[calc((100%-2rem)/3)]">
+                        {matchingUnits.map((unit) => <button className="flex justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm text-slate-100 transition hover:bg-white/10" key={unit._id} onClick={() => chooseUnit(unit)} type="button"><strong>{unitLabel(unit)}</strong><span className="text-slate-400">{unit.residentCurrentId?.name || 'Sem morador atual'}</span></button>)}
                       </div>
                     ) : null}
-                  </div>
+                  </section>
 
-                  <div className="allocation-totals"><div><span>Crédito disponível</span><strong>{formatCents(detail.remainingAmount)}</strong></div><div><span>Alocado agora</span><strong>{formatCents(enteredTotal)}</strong></div><div><span>Restante projetado</span><strong className={enteredTotal > detail.remainingAmount ? 'money-debit' : ''}>{enteredTotal > detail.remainingAmount ? 'Valor excedido' : formatCents(projectedRemaining)}</strong></div></div>
+                  {selectedUnit ? (
+                    <section className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/35 p-5">
+                      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Cobrança do mês</p>
+                          <h3 className="mt-2 text-xl font-black text-white">{formatCompetence(paymentCompetence)} · {unitLabel(selectedUnit)}</h3>
+                          <p className="mt-1 text-sm text-slate-400">{selectedUnit.residentCurrentId?.name || 'Sem morador atual'}</p>
+                        </div>
+                        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-slate-300">
+                          <ListChecks className="h-3.5 w-3.5 text-amber-200" />
+                          {charges.length} cobrança(s)
+                        </span>
+                      </div>
 
-                  <label className="alias-checkbox"><input type="checkbox" checked={saveAlias} onChange={(event) => setSaveAlias(event.target.checked)} /><span>Reconhecer este pagador automaticamente nas próximas importações</span></label>
-                  <button className="primary-button confirm-allocation" disabled={submitting || enteredTotal <= 0 || enteredTotal > detail.remainingAmount} onClick={() => setShowConfirmModal(true)}>{submitting ? 'Confirmando...' : 'Confirmar conciliação'}</button>
+                      <div className="space-y-3">
+                        {charges.map((charge) => (
+                          <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:grid-cols-[1fr_180px] sm:items-center" key={charge._id}>
+                            <div>
+                              <strong className="text-white">{competenceLabel(charge.competence)}</strong>
+                              <span className="mt-1 block text-sm text-slate-400">{formatCents(charge.outstandingAmount)} pendente</span>
+                            </div>
+                            <label className={labelClass}>Alocar (R$)<MoneyInput placeholder="0,00" value={amounts[charge._id] ?? ''} onChange={(value) => setAmounts({ ...amounts, [charge._id]: value })} /></label>
+                          </div>
+                        ))}
+                        {charges.length === 0 ? (
+                          <div className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-amber-300/35 bg-amber-300/10 p-6 text-center">
+                            <p className="text-sm text-amber-50">Esta unidade não possui cobrança aberta para {formatCompetence(paymentCompetence)}.</p>
+                            <button className={primaryActionClass} type="button" disabled={generatingCharges} onClick={() => void generateChargesForPaymentCompetence()}>
+                              {generatingCharges ? 'Gerando...' : 'Gerar cobrança deste mês'}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <AmountTile label="Crédito disponível" value={formatCents(detail.remainingAmount)} />
+                        <AmountTile label="Alocado agora" value={formatCents(enteredTotal)} />
+                        <AmountTile label="Restante projetado" value={enteredTotal > detail.remainingAmount ? 'Valor excedido' : formatCents(projectedRemaining)} danger={enteredTotal > detail.remainingAmount} />
+                      </div>
+
+                      <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-300">
+                        <input className="mt-1 h-4 w-4 accent-amber-300" type="checkbox" checked={saveAlias} onChange={(event) => setSaveAlias(event.target.checked)} />
+                        <span>Reconhecer este pagador automaticamente nas próximas importações</span>
+                      </label>
+                      <button className={cn(primaryActionClass, 'w-full')} disabled={submitting || enteredTotal <= 0 || enteredTotal > detail.remainingAmount} onClick={() => setShowConfirmModal(true)} type="button">
+                        {submitting ? 'Confirmando...' : 'Confirmar conciliação'}
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </section>
+                  ) : null}
+
+                  {detail.allocations.length > 0 ? (
+                    <section className="space-y-3 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                      <h3 className="flex items-center gap-2 text-lg font-black text-white"><RotateCcw className="h-5 w-5 text-amber-200" />Histórico de alocações</h3>
+                      {detail.allocations.map((allocation) => (
+                        <div className={cn('grid gap-3 rounded-2xl border border-white/10 bg-slate-950/30 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center', allocation.reversedAt && 'opacity-55 line-through')} key={allocation._id}>
+                          <div>
+                            <strong className="text-white">{allocation.chargeId.competence}</strong>
+                            <span className="block text-sm text-slate-400">{formatDate(allocation.paymentDate)}</span>
+                            {allocation.reversalReason ? <small className="text-slate-500">{allocation.reversalReason}</small> : null}
+                          </div>
+                          <strong className="text-white">{formatCents(allocation.amount)}</strong>
+                          {!allocation.reversedAt ? <button className={ghostActionClass} onClick={() => setAllocationToReverse(allocation)} type="button">Estornar</button> : <span className="text-sm text-slate-400">Estornado</span>}
+                        </div>
+                      ))}
+                    </section>
+                  ) : null}
+
+                  {detail.manualPaymentCandidates.length > 0 ? (
+                    <section className="space-y-3 rounded-3xl border border-blue-300/20 bg-blue-300/5 p-5">
+                      <div>
+                        <h3 className="flex items-center gap-2 text-lg font-black text-white"><Receipt className="h-5 w-5 text-blue-200" />Baixas manuais para conferir</h3>
+                        <p className="mt-1 text-sm text-slate-400">Vincule uma baixa já registrada ao crédito importado. Nenhuma nova baixa será criada.</p>
+                      </div>
+                      {detail.manualPaymentCandidates.map((candidate) => (
+                        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/30 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center" key={candidate._id}>
+                          <div>
+                            <strong className="text-white">{candidate.unitId ? unitLabel(candidate.unitId) : 'Unidade não informada'}</strong>
+                            <span className="block text-sm text-slate-400">{candidate.chargeId.competence} · baixa manual em {formatDate(candidate.paymentDate)}</span>
+                          </div>
+                          <strong className="text-emerald-100">{formatCents(candidate.amount)}</strong>
+                          <button className={ghostActionClass} disabled={linkingAllocationId === candidate._id} onClick={() => void linkManualPayment(candidate)} type="button">
+                            {linkingAllocationId === candidate._id ? 'Vinculando...' : 'Vincular crédito'}
+                          </button>
+                        </div>
+                      ))}
+                    </section>
+                  ) : null}
                 </div>
-              ) : null}
-
-              {detail.allocations.length > 0 ? <div className="allocation-history"><h3>Histórico de alocações</h3>{detail.allocations.map((allocation) => <div className={`payment-row ${allocation.reversedAt ? 'reversed' : ''}`} key={allocation._id}><div><strong>{allocation.chargeId.competence}</strong><span>{formatDate(allocation.paymentDate)}</span>{allocation.reversalReason ? <small>{allocation.reversalReason}</small> : null}</div><strong>{formatCents(allocation.amount)}</strong>{!allocation.reversedAt ? <button className="link-button danger" onClick={() => setAllocationToReverse(allocation)}>Estornar</button> : <span>Estornado</span>}</div>)}</div> : null}
-            </>
-          )}
-        </section>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {showConfirmModal ? (
@@ -367,6 +568,49 @@ function statusLabel(status: ReconciliationStatus) { return { UNMATCHED: 'Não c
 function typeLabel(type: string) { return { PIX_RECEIVED: 'Pix recebido', TRANSFER_RECEIVED: 'Transferência recebida', OTHER: 'Outro crédito' }[type] ?? type; }
 function parseMoneyToCents(value: string) { try { return reaisInputToCents(value); } catch { return 0; } }
 
+type ReconciliationMetricProps = {
+  icon: typeof Landmark;
+  label: string;
+  value: string;
+  hint: string;
+};
+
+function ReconciliationMetric({ icon: Icon, label, value, hint }: ReconciliationMetricProps) {
+  return (
+    <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-amber-100">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] opacity-75">{label}</p>
+        <Icon className="h-4 w-4 text-amber-200" />
+      </div>
+      <strong className="mt-2 block truncate text-2xl font-black text-white">{value}</strong>
+      <span className="mt-1 block text-sm text-slate-300">{hint}</span>
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: ReconciliationStatus }) {
+  const tone = {
+    UNMATCHED: 'border-amber-300/20 bg-amber-300/10 text-amber-100',
+    PARTIALLY_MATCHED: 'border-blue-300/20 bg-blue-300/10 text-blue-100',
+    MATCHED: 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
+  }[status];
+
+  return (
+    <span className={cn('rounded-full border px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.12em]', tone)}>
+      {statusLabel(status)}
+    </span>
+  );
+}
+
+function AmountTile({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div className={cn('rounded-2xl border p-4', danger ? 'border-red-300/25 bg-red-400/10' : 'border-white/10 bg-white/[0.04]')}>
+      <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{label}</span>
+      <strong className={cn('mt-2 block text-lg font-black', danger ? 'text-red-100' : 'text-white')}>{value}</strong>
+    </div>
+  );
+}
+
 function paymentCompetenceOptions() {
   const current = currentCompetence();
   return [
@@ -392,17 +636,19 @@ function shiftCompetence(value: string, offset: number) {
   return date.toISOString().slice(0, 7);
 }
 
-function residentsWithUnit(residents: Resident[]) {
-  return residents.filter((resident) => unitOfResident(resident));
+function residentsWithUnit(residents: Resident[], units: Unit[]) {
+  return residents.filter((resident) => unitsOfResident(resident, units).length > 0);
 }
 
-function residentLabel(resident: Resident) {
-  const unit = unitOfResident(resident);
-  return unit ? `${resident.name} · ${unitLabel(unit)}` : resident.name;
+function residentLabel(resident: Resident, units: Unit[]) {
+  const residentUnits = unitsOfResident(resident, units);
+  if (residentUnits.length === 0) return resident.name;
+  if (residentUnits.length === 1 && residentUnits[0]) return `${resident.name} · ${unitLabel(residentUnits[0])}`;
+  return `${resident.name} · ${residentUnits.length} unidades`;
 }
 
-function unitOfResident(resident?: Resident) {
-  return resident?.unitId && typeof resident.unitId !== 'string' ? resident.unitId : null;
+function unitsOfResident(resident: Resident, units: Unit[]) {
+  return units.filter((unit) => residentIdOfUnit(unit) === resident._id);
 }
 
 function residentIdOfUnit(unit: Unit) {
