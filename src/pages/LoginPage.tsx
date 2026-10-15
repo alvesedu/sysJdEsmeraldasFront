@@ -22,11 +22,7 @@ export function LoginPage() {
     setError,
     formState: { errors, isSubmitting }
   } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: 'admin@condominio.local',
-      password: 'admin123'
-    }
+    resolver: zodResolver(loginSchema)
   });
 
   async function onSubmit(values: LoginForm) {
@@ -56,9 +52,10 @@ export function LoginPage() {
         <h2>Acesso administrativo</h2>
         <form className="stack auth-form" onSubmit={handleSubmit(onSubmit)} noValidate>
           <label>
-            E-mail
+            Usuário (e-mail)
             <input
               autoComplete="email"
+              placeholder="Digite seu usuário"
               aria-invalid={errors.email ? 'true' : 'false'}
               {...register('email')}
             />
@@ -70,6 +67,7 @@ export function LoginPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
+                placeholder="Digite sua senha"
                 aria-invalid={errors.password ? 'true' : 'false'}
                 {...register('password')}
               />
