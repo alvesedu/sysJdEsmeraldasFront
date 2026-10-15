@@ -31,6 +31,10 @@ const navGroups = [
       ['Contas a pagar', '/payables'],
       ['Fechamentos', '/closings']
     ]
+  },
+  {
+    label: 'Análise',
+    items: [['Relatórios', '/reports']]
   }
 ] as const;
 
