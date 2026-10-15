@@ -13,8 +13,7 @@ const navGroups = [
       ['Unidades', '/units'],
       ['Moradores', '/residents'],
       ['Categorias', '/categories'],
-      ['Importações', '/imports'],
-      ['Auditoria', '/audit']
+      ['Importações', '/imports']
     ]
   },
   {
@@ -37,6 +36,10 @@ const navGroups = [
   {
     label: 'Análise',
     items: [['Relatórios', '/reports']]
+  },
+  {
+    label: 'Sistema',
+    items: [['Auditoria', '/audit']]
   }
 ] as const;
 
