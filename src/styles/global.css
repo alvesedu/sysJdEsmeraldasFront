@@ -1352,6 +1352,69 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  .quick-entry-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .quick-entry-table thead {
+    display: none;
+  }
+
+  .quick-entry-table tbody,
+  .quick-entry-table tr,
+  .quick-entry-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .quick-entry-table tr {
+    margin: 0.75rem 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--panel-border);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .quick-entry-table td {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 0.42fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.65rem 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .quick-entry-table td + td {
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .quick-entry-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .quick-entry-table td > * {
+    justify-self: end;
+    max-width: 100%;
+  }
+
+  .quick-entry-table td[data-label="Ação"] > div {
+    width: 100%;
+  }
+
+  .quick-entry-table td[data-label="Ação"] button,
+  .quick-entry-table td[data-label="Ação"] span {
+    margin-left: auto;
+  }
+
   .modal-backdrop {
     align-items: end;
     padding: 0.75rem;

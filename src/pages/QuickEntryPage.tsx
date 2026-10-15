@@ -401,21 +401,21 @@ export function QuickEntryPage() {
           <CardContent>
             <div className="overflow-hidden rounded-3xl border border-white/10">
               <div className="overflow-x-auto">
-                <table className="min-w-[1240px] w-full border-collapse text-left">
+                  <table className="quick-entry-table min-w-[1240px] w-full border-collapse text-left">
                   <thead className="bg-slate-950/55 text-xs uppercase tracking-[0.18em] text-slate-400"><tr><th className="px-4 py-4">#</th><th className="px-4 py-4">Pagador</th><th className="px-4 py-4">Pago?</th><th className="px-4 py-4">Valor</th><th className="px-4 py-4">Meses citados</th><th className="px-4 py-4">Confiança</th><th className="px-4 py-4">Linha original</th><th className="px-4 py-4 text-right">Ação</th></tr></thead>
                   <tbody className="divide-y divide-white/10">
                     {visibleItems.map((item) => {
                       const confirmed = confirmedLines[lineKey(item)];
                       return (
                         <tr className="bg-white/[0.025] transition hover:bg-emerald-300/5" key={`${item.lineNumber}-${item.rawText}`}>
-                          <td className="px-4 py-4 font-black text-white">{item.sequence ?? item.lineNumber}</td>
-                          <td className="px-4 py-4 font-bold text-white">{item.payerName || 'Revisar nome'}{item.suggestionReason ? <small className="mt-1 block font-normal text-emerald-200">{item.suggestionConfidence === 'HIGH' ? 'Vínculo sugerido' : 'Vínculo para revisar'}</small> : null}</td>
-                          <td className="px-4 py-4">{item.paid ? <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">Sim</span> : <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-slate-300">Não</span>}</td>
-                          <td className="px-4 py-4 font-bold text-amber-100">{item.amountCents === null ? 'Revisar' : formatCents(item.amountCents)}</td>
-                          <td className="px-4 py-4 text-slate-300">{item.periodHints.length ? item.periodHints.join(', ') : '-'}</td>
-                          <td className="px-4 py-4"><ConfidenceBadge value={item.confidence} /></td>
-                          <td className="px-4 py-4 text-slate-300">{item.rawText}</td>
-                          <td className="px-4 py-4"><div className="flex justify-end">{confirmed ? <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">Baixado</span> : <button className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-100 transition hover:border-amber-300/40 hover:bg-amber-300/10 disabled:cursor-not-allowed disabled:opacity-40" disabled={!item.paid} onClick={() => openReview(item)} type="button">Revisar</button>}</div></td>
+                          <td className="px-4 py-4 font-black text-white" data-label="#">{item.sequence ?? item.lineNumber}</td>
+                          <td className="px-4 py-4 font-bold text-white" data-label="Pagador">{item.payerName || 'Revisar nome'}{item.suggestionReason ? <small className="mt-1 block font-normal text-emerald-200">{item.suggestionConfidence === 'HIGH' ? 'Vínculo sugerido' : 'Vínculo para revisar'}</small> : null}</td>
+                          <td className="px-4 py-4" data-label="Pago?">{item.paid ? <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">Sim</span> : <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-slate-300">Não</span>}</td>
+                          <td className="px-4 py-4 font-bold text-amber-100" data-label="Valor">{item.amountCents === null ? 'Revisar' : formatCents(item.amountCents)}</td>
+                          <td className="px-4 py-4 text-slate-300" data-label="Meses citados">{item.periodHints.length ? item.periodHints.join(', ') : '-'}</td>
+                          <td className="px-4 py-4" data-label="Confiança"><ConfidenceBadge value={item.confidence} /></td>
+                          <td className="px-4 py-4 text-slate-300" data-label="Linha original">{item.rawText}</td>
+                          <td className="px-4 py-4" data-label="Ação"><div className="flex justify-end">{confirmed ? <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">Baixado</span> : <button className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-100 transition hover:border-amber-300/40 hover:bg-amber-300/10 disabled:cursor-not-allowed disabled:opacity-40" disabled={!item.paid} onClick={() => openReview(item)} type="button">Revisar</button>}</div></td>
                         </tr>
                       );
                     })}
