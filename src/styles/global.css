@@ -127,6 +127,45 @@ label {
   text-transform: uppercase;
 }
 
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.8rem 0.35rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--accent-soft);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+  transition: 0.2s ease;
+}
+
+.nav-group-toggle:hover,
+.nav-group-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  outline: none;
+}
+
+.nav-group-chevron {
+  transition: transform 0.2s ease;
+}
+
+.nav-group-chevron.open {
+  transform: rotate(180deg);
+}
+
+.nav-group-items {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .nav-link {
   padding: 0.8rem 0.9rem;
   border-radius: 12px;
