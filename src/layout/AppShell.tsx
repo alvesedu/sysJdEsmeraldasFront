@@ -39,7 +39,10 @@ const navGroups = [
   },
   {
     label: 'Sistema',
-    items: [['Auditoria', '/audit']]
+    items: [
+      ['Auditoria', '/audit'],
+      ['Valores mensais', '/pricing-rules']
+    ]
   }
 ] as const;
 
