@@ -30,6 +30,8 @@ export function UnitsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState({ quadra: '', numero: '', tipo: '', status: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -83,6 +85,9 @@ export function UnitsPage() {
       return matchesQuadra && matchesNumero && matchesTipo && matchesStatus;
     });
   }, [filters, units]);
+  const pageCount = Math.max(1, Math.ceil(visibleUnits.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pagedUnits = visibleUnits.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function startCreate() {
     setEditingId(null);
@@ -249,7 +254,7 @@ export function UnitsPage() {
                       <tr><th className="px-4 py-4">Quadra</th><th className="px-4 py-4">Número</th><th className="px-4 py-4">Tipo</th><th className="px-4 py-4">Situação</th><th className="px-4 py-4">Morador atual</th><th className="px-4 py-4">Mensalidade</th><th className="px-4 py-4 text-right">Ações</th></tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {visibleUnits.map((unit) => (
+                      {pagedUnits.map((unit) => (
                         <tr className="bg-white/[0.025] transition hover:bg-amber-300/5" key={unit._id}>
                           <td className="px-4 py-4 font-black text-white">{unit.quadra}</td>
                           <td className="px-4 py-4 text-slate-200">{unit.numero}</td>
@@ -272,6 +277,7 @@ export function UnitsPage() {
                 {visibleUnits.length === 0 ? <div className="p-8 text-center text-slate-300">Nenhuma unidade encontrada.</div> : null}
               </div>
             )}
+            {!loading && visibleUnits.length > 0 ? <PaginationControls currentPage={currentPage} pageCount={pageCount} pageSize={pageSize} total={visibleUnits.length} onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
           </CardContent>
         </Card>
 
@@ -361,6 +367,20 @@ function residentLabel(resident: Resident) {
 
 function unitLabel(unit: Unit) {
   return `Quadra ${unit.quadra} · ${unit.tipo === 'CASA' ? 'Casa' : 'Lote'} ${unit.numero}`;
+}
+
+function PaginationControls({ currentPage, pageCount, pageSize, total, onPageChange, onPageSizeChange }: { currentPage: number; pageCount: number; pageSize: number; total: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
+  return (
+    <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <span>Mostrando {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, total)} de {total}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2">Por página<select className="h-9 rounded-xl border border-white/10 bg-slate-950/60 px-2 text-sm text-white outline-none focus:border-amber-300/60" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label>
+        <button className="h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white transition hover:border-amber-300/40 disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)}>Anterior</button>
+        <span className="min-w-16 text-center text-xs font-bold text-slate-300">{currentPage} / {pageCount}</span>
+        <button className="h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white transition hover:border-amber-300/40 disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={currentPage === pageCount} onClick={() => onPageChange(currentPage + 1)}>Próxima</button>
+      </div>
+    </div>
+  );
 }
 
 function formatDate(value: string) {

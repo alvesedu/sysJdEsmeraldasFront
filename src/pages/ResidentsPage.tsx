@@ -24,6 +24,8 @@ export function ResidentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [detail, setDetail] = useState<Resident | null>(null);
   const [filters, setFilters] = useState({ name: '', unitId: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -53,6 +55,9 @@ export function ResidentsPage() {
     const matchesUnit = !filters.unitId || residentUnits.some((unit) => unit._id === filters.unitId);
     return matchesName && matchesUnit;
   }), [filters, residents, units]);
+  const pageCount = Math.max(1, Math.ceil(visibleResidents.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pagedResidents = visibleResidents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function startCreate() {
     setEditingId(null);
@@ -184,7 +189,7 @@ export function ResidentsPage() {
                       <tr><th className="px-4 py-4">Morador</th><th className="px-4 py-4">Unidade atual</th><th className="px-4 py-4">Contato</th><th className="px-4 py-4">Situação</th><th className="px-4 py-4 text-right">Ações</th></tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {visibleResidents.map((resident) => {
+                      {pagedResidents.map((resident) => {
                         const residentUnits = unitsOfResident(resident, units);
                         return (
                           <tr className="bg-white/[0.025] transition hover:bg-amber-300/5" key={resident._id}>
@@ -207,6 +212,7 @@ export function ResidentsPage() {
                 {visibleResidents.length === 0 ? <div className="p-8 text-center text-slate-300">Nenhum morador encontrado.</div> : null}
               </div>
             )}
+            {!loading && visibleResidents.length > 0 ? <PaginationControls currentPage={currentPage} pageCount={pageCount} pageSize={pageSize} total={visibleResidents.length} onPageChange={setPage} onPageSizeChange={(value) => { setPageSize(value); setPage(1); }} /> : null}
           </CardContent>
         </Card>
 
@@ -258,4 +264,18 @@ function residentIdOfUnit(unit: Unit) {
 
 function unitLabel(unit: Unit) {
   return `Quadra ${unit.quadra} · ${unit.tipo === 'CASA' ? 'Casa' : 'Lote'} ${unit.numero}`;
+}
+
+function PaginationControls({ currentPage, pageCount, pageSize, total, onPageChange, onPageSizeChange }: { currentPage: number; pageCount: number; pageSize: number; total: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
+  return (
+    <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <span>Mostrando {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, total)} de {total}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2">Por página<select className="h-9 rounded-xl border border-white/10 bg-slate-950/60 px-2 text-sm text-white outline-none focus:border-amber-300/60" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label>
+        <button className="h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white transition hover:border-amber-300/40 disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)}>Anterior</button>
+        <span className="min-w-16 text-center text-xs font-bold text-slate-300">{currentPage} / {pageCount}</span>
+        <button className="h-9 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-white transition hover:border-amber-300/40 disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={currentPage === pageCount} onClick={() => onPageChange(currentPage + 1)}>Próxima</button>
+      </div>
+    </div>
+  );
 }
