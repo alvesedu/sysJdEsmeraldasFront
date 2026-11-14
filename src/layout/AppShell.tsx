@@ -11,7 +11,8 @@ const navGroups = [
     label: 'Gerenciamento',
     items: [
       ['Unidades', '/units'],
-      ['Moradores', '/residents']
+      ['Moradores', '/residents'],
+      ['Mapa do condomínio', '/map']
     ]
   },
   {
