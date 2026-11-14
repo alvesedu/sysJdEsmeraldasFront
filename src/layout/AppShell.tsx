@@ -11,9 +11,7 @@ const navGroups = [
     label: 'Gerenciamento',
     items: [
       ['Unidades', '/units'],
-      ['Moradores', '/residents'],
-      ['Categorias', '/categories'],
-      ['Importações', '/imports']
+      ['Moradores', '/residents']
     ]
   },
   {
@@ -28,6 +26,8 @@ const navGroups = [
       ['Cobranças', '/charges'],
       ['Inadimplentes', '/defaulters'],
       ['Conciliação', '/reconciliation'],
+      ['Categorias', '/categories'],
+      ['Importações', '/imports'],
       ['Despesas', '/expenses'],
       ['Contas a pagar', '/payables'],
       ['Fechamentos', '/closings']
